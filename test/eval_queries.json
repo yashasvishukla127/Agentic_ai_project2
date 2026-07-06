@@ -1,0 +1,359 @@
+[
+  {
+    "id": "SP_F_001",
+    "question": "What does SPIN stand for in the SPIN Selling framework?",
+    "expected": "SPIN stands for Situation, Problem, Implication, Need-payoff — the four question types used in sequence by high-performing salespeople in complex sales.",
+    "collection": "sales_psychology",
+    "type": "factual"
+  },
+  {
+    "id": "SP_F_002",
+    "question": "How many sales calls were studied in Rackham's SPIN research?",
+    "expected": "Rackham's research studied 35,000 sales calls across 23 countries over 12 years.",
+    "collection": "sales_psychology",
+    "type": "factual"
+  },
+  {
+    "id": "SP_F_003",
+    "question": "What are the five seller profiles identified in the Challenger Sale research?",
+    "expected": "The five profiles are the Hard Worker, the Relationship Builder, the Lone Wolf, the Reactive Problem Solver, and the Challenger.",
+    "collection": "sales_psychology",
+    "type": "factual"
+  },
+  {
+    "id": "SP_F_004",
+    "question": "What percentage of star performers in the CEB study were Challengers in difficult economic conditions?",
+    "expected": "Approximately 54% of all star performers in the CEB study were Challengers, and this proportion increased further in difficult economic conditions.",
+    "collection": "sales_psychology",
+    "type": "factual"
+  },
+  {
+    "id": "SP_F_005",
+    "question": "What are the three voices Voss identifies as available to a negotiator?",
+    "expected": "Voss identifies three voices: the assertive voice (direct, fast — triggers defensiveness), the playful or positive voice (light, warm — good for rapport), and the late-night FM DJ voice (slow, calm, downward inflection — triggers trust and compliance).",
+    "collection": "sales_psychology",
+    "type": "factual"
+  },
+  {
+    "id": "SP_F_006",
+    "question": "What format does a label take in Voss's negotiation framework?",
+    "expected": "A label uses the format 'It seems like...', 'It sounds like...', or 'It looks like...' — never 'I feel like you're...' because that makes it about the speaker rather than the other party.",
+    "collection": "sales_psychology",
+    "type": "factual"
+  },
+  {
+    "id": "SP_F_007",
+    "question": "What is mirroring in the context of Voss's negotiation method?",
+    "expected": "Mirroring is the repetition of the last three to five words of what the other person said, delivered with an upward inflection, to signal you heard them and invite elaboration without introducing your own agenda.",
+    "collection": "sales_psychology",
+    "type": "factual"
+  },
+  {
+    "id": "SP_F_008",
+    "question": "What are the three behaviours that define a Challenger salesperson?",
+    "expected": "The three Challenger behaviours are: teach for differentiation (share a reframe that leads back to your capability), tailor for resonance (customise the message to the specific stakeholder's priorities), and take control of the sale (hold position on price and direction without capitulating).",
+    "collection": "sales_psychology",
+    "type": "factual"
+  },
+  {
+    "id": "SP_F_009",
+    "question": "What is the accusation audit and when should it be used?",
+    "expected": "The accusation audit is a technique where you pre-emptively name all the negative things the other party might be thinking about you before raising a difficult topic. It is used before discussing pricing, timelines, or anything where the other party might have objections, because naming the negatives first removes their power.",
+    "collection": "sales_psychology",
+    "type": "factual"
+  },
+  {
+    "id": "SP_F_010",
+    "question": "What does Voss mean by a calibrated question?",
+    "expected": "A calibrated question begins with 'what' or 'how' and is designed to make the other party solve your problem rather than you telling them what to do. For example, 'How am I supposed to do that?' in response to an unreasonable demand forces the other party to engage with the constraint rather than dismissing a refusal.",
+    "collection": "sales_psychology",
+    "type": "factual"
+  },
+  {
+    "id": "SP_C_011",
+    "question": "Why do implication questions have more impact than other SPIN question types in large sales?",
+    "expected": "Implication questions expand a problem the buyer already acknowledged into something with larger consequences, causing the buyer to calculate the cost of the problem themselves rather than being told. This develops the buyer's perception of value more powerfully than any other question type because the buyer reaches the conclusion independently. Rackham's research found implication questions had more impact on closing rates in large sales than any other single behaviour.",
+    "collection": "sales_psychology",
+    "type": "conceptual"
+  },
+  {
+    "id": "SP_C_012",
+    "question": "Why are Relationship Builders the least effective seller profile in complex sales according to the Challenger research?",
+    "expected": "Relationship Builders are least effective because building personal relationships and avoiding tension is not a differentiator — buyers expect it. The research found that being generous with time and prioritising buyer comfort does not drive purchase decisions in complex sales, particularly in difficult economic conditions where buyers need insight and commercial challenge, not comfort.",
+    "collection": "sales_psychology",
+    "type": "conceptual"
+  },
+  {
+    "id": "SP_C_013",
+    "question": "What is tactical empathy and how does it differ from sympathy?",
+    "expected": "Tactical empathy is understanding the emotional state of the other party and demonstrating that understanding without necessarily agreeing with them. It differs from sympathy, which means feeling what the other person feels, and from agreement, which means sharing their position. The mechanism is that when a person feels understood, their defensiveness decreases and they become more open to influence.",
+    "collection": "sales_psychology",
+    "type": "conceptual"
+  },
+  {
+    "id": "SP_C_014",
+    "question": "Why does Voss argue that 'no' is more valuable than 'yes' in a negotiation?",
+    "expected": "Voss argues that 'yes' is often a false agreement that unravels later, while 'no' signals authentic engagement — when someone says no, they are telling you something true about their position. Techniques that push for 'yes' create defensiveness; techniques that make 'no' safe create honesty. A buyer who says 'no, that's not quite right' is engaging more genuinely than one who gives an obligatory 'yes'.",
+    "collection": "sales_psychology",
+    "type": "conceptual"
+  },
+  {
+    "id": "SP_C_015",
+    "question": "What is premature solution presentation and why does Rackham identify it as the leading cause of price objections?",
+    "expected": "Premature solution presentation is introducing your solution before the buyer feels the problem is large enough to justify the cost. According to Rackham, buyers who have not yet felt the weight of the problem through implication questions have no internal justification for the price, so price becomes the primary concern. Developing the problem fully before presenting a solution removes the basis for price objections because the buyer has already calculated the cost of not solving it.",
+    "collection": "sales_psychology",
+    "type": "conceptual"
+  },
+  {
+    "id": "SP_C_016",
+    "question": "What is the difference between an advance and a continuation in a large sale?",
+    "expected": "An advance is a concrete next step the buyer agrees to take that moves the sale forward — for example, agreeing to introduce you to the decision maker or scheduling a product demonstration. A continuation looks like progress but involves no buyer commitment to a specific action. Rackham identifies failing to obtain an advance as the defining characteristic of an ineffective large-sale call, even if the conversation felt positive.",
+    "collection": "sales_psychology",
+    "type": "conceptual"
+  },
+  {
+    "id": "SP_C_017",
+    "question": "Why does the SPIN methodology not transfer to transactional low-value sales?",
+    "expected": "SPIN was developed specifically through research on complex, high-value sales where buying decisions take time and involve multiple stakeholders. In transactional, low-value sales, the buyer's decision is quick and the depth of questioning that SPIN requires would feel disproportionate and tedious. Rackham's research found that traditional closing techniques, which hurt performance in large sales, are more effective in small sales.",
+    "collection": "sales_psychology",
+    "type": "conceptual"
+  },
+  {
+    "id": "SP_A_018",
+    "question": "A prospect says 'I need to think about it.' What is the recommended response and why?",
+    "expected": "The recommended response is to ask: 'Of course. Just so I can be helpful when you do — what specifically are you going to be thinking through?' This is a curious, non-aggressive question that surfaces the real concern, since 'I need to think about it' almost always means something else — price, authority, competitor preference, or insufficient value. If the response is vague, follow up with: 'Is it more about the investment, the implementation, or something else entirely?' to offer three buckets and let the buyer self-select.",
+    "collection": "sales_psychology",
+    "type": "application"
+  },
+  {
+    "id": "SP_A_019",
+    "question": "A prospect says 'your price is too high.' What diagnostic question should be asked first and what does the answer reveal?",
+    "expected": "The diagnostic question is 'Compared to what?' — asked calmly, not defensively. This forces the buyer to articulate what they are measuring against, which reveals whether the objection is a genuine budget constraint, a value gap where they do not yet see enough return to justify the price, or a negotiating tactic used as an anchor. The appropriate response depends entirely on which of these three it is.",
+    "collection": "sales_psychology",
+    "type": "application"
+  },
+  {
+    "id": "SP_A_020",
+    "question": "How should a salesperson respond to a prospect who says they are already working with a competitor?",
+    "expected": "Acknowledge the existing relationship first: 'That makes sense — switching is a real cost and not something anyone takes lightly.' This label reduces defensiveness. The follow-up is: 'What would have to be true for you to consider evaluating alternatives?' This is a diagnostic question, not an ask for the business — it surfaces what would need to change and subtly plants the idea that alternatives are worth considering without attacking the incumbent.",
+    "collection": "sales_psychology",
+    "type": "application"
+  },
+  {
+    "id": "SP_A_021",
+    "question": "What is the structure of the commercial teaching pitch used by Challenger salespeople?",
+    "expected": "The commercial teaching pitch follows this sequence: open with a reframe (a surprising insight that challenges the buyer's current view), build the case (develop the implication of the insight), introduce rational drowning (quantify the cost or risk to make the status quo uncomfortable), propose an emotional resolution (show what a better state looks like), then introduce your solution as the only logical response to the reframe. The solution only lands after the buyer has been moved through the reframe and felt its implication.",
+    "collection": "sales_psychology",
+    "type": "application"
+  },
+  {
+    "id": "SP_A_022",
+    "question": "A prospect says 'now isn't a good time.' How do you distinguish between a genuine timing constraint and a soft rejection?",
+    "expected": "Ask: 'That's completely fair. When would be a better time, and what do you need to see between now and then?' The second clause is the diagnostic — if the buyer can name what would need to change for the timing to be right, the deferral is genuine. If they cannot name a specific condition or timeframe, the timing objection is most likely a polite no, not a genuine deferral.",
+    "collection": "sales_psychology",
+    "type": "application"
+  },
+  {
+    "id": "MG_F_023",
+    "question": "What is the minimum down payment for an FHA loan for a borrower with a credit score of 580?",
+    "expected": "The minimum down payment for an FHA loan with a credit score of 580 or higher is 3.5%.",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_F_024",
+    "question": "What is the minimum credit score required to be eligible for an FHA loan?",
+    "expected": "The minimum credit score for FHA eligibility is 500. Borrowers with scores between 500 and 579 require a 10% down payment. Borrowers with scores of 580 or higher qualify for the 3.5% minimum down payment. Credit scores below 500 are ineligible for FHA financing.",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_F_025",
+    "question": "At what LTV threshold is private mortgage insurance no longer required on a conventional loan?",
+    "expected": "PMI is not required at or below 80% LTV on a conventional loan. The Homeowners Protection Act requires automatic PMI cancellation once the loan balance reaches 80% of the original appraised value, and borrowers can request cancellation at 80% LTV based on current value through a new appraisal.",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_F_026",
+    "question": "What is the conforming loan limit for a single-unit property in 2024 in most areas?",
+    "expected": "The 2024 conforming loan limit for a single-unit property is $766,550 in most areas, with higher limits in high-cost counties.",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_F_027",
+    "question": "What are the three C's of mortgage underwriting?",
+    "expected": "The three C's are Capacity (can the borrower afford the payment, assessed through income documentation and DTI), Capital (does the borrower have sufficient assets for down payment, closing costs, and reserves), and Credit (what is the borrower's history of repaying debt, including score, payment history, and derogatory marks).",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_F_028",
+    "question": "What is the mandatory waiting period after a Chapter 7 bankruptcy before a borrower is eligible for a conventional loan?",
+    "expected": "A Chapter 7 bankruptcy requires four years from the discharge date before a borrower is eligible for a conventional loan. The waiting period is two years for FHA and VA loans.",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_F_029",
+    "question": "What is the upfront mortgage insurance premium percentage for FHA loans?",
+    "expected": "The upfront mortgage insurance premium (UFMIP) for FHA loans is 1.75% of the base loan amount. It is typically financed into the loan rather than paid at closing.",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_F_030",
+    "question": "How many business days before closing must the Closing Disclosure be provided to the borrower?",
+    "expected": "The Closing Disclosure must be provided at least three business days before consummation (closing). This waiting period is mandatory under TRID and cannot be waived except in a bona fide personal financial emergency.",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_F_031",
+    "question": "What are the two automated underwriting systems used for conventional mortgage applications?",
+    "expected": "The two systems are Fannie Mae's Desktop Underwriter (DU) and Freddie Mac's Loan Product Advisor (LPA). They evaluate loan files against guidelines and return findings of Approve/Eligible (DU) or Accept (LPA), Refer with Caution, or Ineligible.",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_F_032",
+    "question": "What is the VA loan funding fee range and who may be exempt from it?",
+    "expected": "The VA funding fee ranges from 1.25% to 3.3% of the loan amount, depending on the down payment amount and whether it is the borrower's first use of the benefit. Veterans with a service-connected disability may have the funding fee waived entirely.",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_F_033",
+    "question": "What income threshold must a USDA loan borrower's household income not exceed?",
+    "expected": "For USDA loan eligibility, household income must not exceed 115% of the area median income.",
+    "collection": "mortgage_domain",
+    "type": "factual"
+  },
+  {
+    "id": "MG_C_034",
+    "question": "Why does FHA mortgage insurance not cancel at 80% LTV the way conventional PMI does?",
+    "expected": "FHA annual MIP is permanent for the life of the loan for borrowers who put down less than 10%. This is a structural feature of the FHA program — unlike conventional PMI, which is governed by the Homeowners Protection Act and cancels at 80% LTV, FHA MIP rules do not include the same equity-based cancellation mechanism. Borrowers who put down 10% or more can have MIP removed after 11 years. This makes FHA financing more expensive in the long run for borrowers who build significant equity.",
+    "collection": "mortgage_domain",
+    "type": "conceptual"
+  },
+  {
+    "id": "MG_C_035",
+    "question": "What is the difference between front-end DTI and back-end DTI?",
+    "expected": "Front-end DTI (the housing ratio) includes only the proposed housing payment — principal, interest, property taxes, homeowner's insurance, and HOA dues — divided by gross monthly income. Back-end DTI includes the housing payment plus all recurring monthly debt obligations (auto loans, student loans, credit card minimums) divided by gross monthly income. Lenders evaluate both, but back-end DTI is the primary qualifying ratio for most loan programs.",
+    "collection": "mortgage_domain",
+    "type": "conceptual"
+  },
+  {
+    "id": "MG_C_036",
+    "question": "What is a Qualified Mortgage and what legal protection does it provide to lenders?",
+    "expected": "A Qualified Mortgage (QM), established under the Dodd-Frank Act, is a loan category that provides lenders with a legal safe harbour — protection against claims that the lender failed to verify the borrower's ability to repay. Key QM requirements include back-end DTI not exceeding 43%, no negative amortisation, no interest-only periods, loan terms not exceeding 30 years, and points and fees not exceeding 3% of the loan amount.",
+    "collection": "mortgage_domain",
+    "type": "conceptual"
+  },
+  {
+    "id": "MG_C_037",
+    "question": "Why does APR always equal or exceed the stated interest rate on a mortgage?",
+    "expected": "APR includes not just the interest rate but most fees associated with the loan — origination fees, points, mortgage insurance — spread over the life of the loan. Because upfront costs are amortised into the APR calculation, it is always at least equal to the interest rate and often significantly higher on loans with substantial fees. APR is a standardised comparison tool, but it overstates the true cost for borrowers who sell or refinance before the loan matures.",
+    "collection": "mortgage_domain",
+    "type": "conceptual"
+  },
+  {
+    "id": "MG_C_038",
+    "question": "What is the difference between a conforming and a non-conforming conventional loan?",
+    "expected": "A conforming loan meets Fannie Mae and Freddie Mac purchase guidelines, including the loan limit (set annually by FHFA), maximum DTI, and minimum credit score requirements. This allows the lender to sell the loan into the secondary market. A non-conforming loan exceeds those guidelines — most commonly by exceeding the loan limit (making it a jumbo loan) — and must be held on the lender's balance sheet or sold to private investors. Non-conforming loans typically require stronger credit profiles and carry higher rates.",
+    "collection": "mortgage_domain",
+    "type": "conceptual"
+  },
+  {
+    "id": "MG_A_039",
+    "question": "A borrower has a loan amount of $320,000 on a property appraised at $400,000. What is their LTV and what does it mean for PMI on a conventional loan?",
+    "expected": "LTV = 320,000 / 400,000 × 100 = 80%. At exactly 80% LTV, the borrower is at the conventional PMI threshold — PMI is not required. If the loan were $321,000 on the same property (80.25% LTV), PMI would be triggered.",
+    "collection": "mortgage_domain",
+    "type": "application"
+  },
+  {
+    "id": "MG_A_040",
+    "question": "What income documentation does a lender require for a self-employed borrower who owns 30% of an S-Corporation?",
+    "expected": "A borrower owning 25% or more of a business is classified as self-employed. For an S-Corporation, qualifying income is derived from the borrower's Schedule K-1 (their share of business income) and their W-2 wages from the corporation. The lender uses a two-year average of this income, excluding non-recurring items. If income declined between year one and year two, the underwriter may use the lower year or average depending on the magnitude of the decline.",
+    "collection": "mortgage_domain",
+    "type": "application"
+  },
+  {
+    "id": "MG_A_041",
+    "question": "A borrower's rate lock expires three days before the scheduled closing date due to title delays. What options does the lender have?",
+    "expected": "If a rate lock expires before closing, the lender can either extend the lock — typically for a fee or at a slightly higher rate depending on market conditions — or allow the lock to expire and reset the rate to the current market rate. Borrowers should align lock periods with realistic closing timelines when ordering the lock, and communicate immediately with the lender if delays are anticipated so an extension can be negotiated before expiration.",
+    "collection": "mortgage_domain",
+    "type": "application"
+  },
+  {
+    "id": "MG_A_042",
+    "question": "Which closing costs fall in the zero-tolerance category under TRID and cannot increase from the Loan Estimate to the Closing Disclosure?",
+    "expected": "Zero-tolerance closing costs are those that cannot increase at all from the Loan Estimate to the Closing Disclosure. They include lender fees (origination, processing, underwriting), transfer taxes, and any third-party services for which the borrower was not permitted to shop.",
+    "collection": "mortgage_domain",
+    "type": "application"
+  },
+  {
+    "id": "MG_A_043",
+    "question": "A conventional loan borrower has a 45% back-end DTI. Under what circumstances might this be approved?",
+    "expected": "A 45% back-end DTI on a conventional loan may be approved through automated underwriting (DU or LPA) with compensating factors — typically a strong credit score (740+), significant cash reserves (12+ months PITI), or a substantial down payment. Manual underwriting at 45% DTI is significantly harder to approve without strong compensating factors and is generally capped lower.",
+    "collection": "mortgage_domain",
+    "type": "application"
+  },
+  {
+    "id": "MG_B_044",
+    "question": "A veteran borrower wants 100% financing with no PMI and has a service-connected disability. What loan program applies and what fee is waived?",
+    "expected": "A VA loan applies — it offers 100% financing (no down payment) with no private mortgage insurance requirement. For a veteran with a service-connected disability, the VA funding fee (which normally ranges from 1.25% to 3.3% of the loan amount) is waived entirely.",
+    "collection": "mortgage_domain",
+    "type": "boundary"
+  },
+  {
+    "id": "MG_B_045",
+    "question": "A borrower had a foreclosure completed five years ago. Which loan programs are currently available to them?",
+    "expected": "The waiting period after a completed foreclosure is seven years for conventional loans — so this borrower is not yet eligible for conventional financing. FHA requires three years from the completion date, so the borrower became eligible two years ago and FHA is available. VA and USDA also have their own waiting periods that would need to be confirmed against the borrower's eligibility. The borrower may also qualify for non-QM portfolio lending, which can have shorter or no mandatory waiting periods at higher rates.",
+    "collection": "mortgage_domain",
+    "type": "boundary"
+  },
+  {
+    "id": "MG_B_046",
+    "question": "A borrower in a rural area has a household income that is 110% of the area median income. Are they eligible for a USDA loan?",
+    "expected": "No. USDA loan eligibility requires household income to not exceed 115% of the area median income. At 110%, the borrower is within the income limit and would pass this requirement — eligibility would then depend on property location (must be in a USDA-eligible area) and the lender's minimum credit score requirement (typically 640 for automated underwriting approval).",
+    "collection": "mortgage_domain",
+    "type": "boundary"
+  },
+  {
+    "id": "SF_047",
+    "question": "What is the current federal funds rate set by the Federal Reserve?",
+    "expected": "insufficient information",
+    "collection": "none",
+    "type": "should_fail"
+  },
+  {
+    "id": "SF_048",
+    "question": "What is the best SPIN question to use when a mortgage client objects to closing costs on an FHA loan?",
+    "expected": "insufficient information",
+    "collection": "none",
+    "type": "should_fail"
+  },
+  {
+    "id": "SF_049",
+    "question": "What is the average home price in Dallas, Texas for 2024?",
+    "expected": "insufficient information",
+    "collection": "none",
+    "type": "should_fail"
+  },
+  {
+    "id": "SF_050",
+    "question": "How does Chris Voss's mirroring technique apply when negotiating a mortgage rate reduction with a lender?",
+    "expected": "insufficient information",
+    "collection": "none",
+    "type": "should_fail"
+  },
+  {
+    "id": "SF_051",
+    "question": "Which is better for a first-time homebuyer — a 30-year fixed FHA loan or a 5/1 ARM conventional loan?",
+    "expected": "insufficient information",
+    "collection": "none",
+    "type": "should_fail"
+  }
+]
