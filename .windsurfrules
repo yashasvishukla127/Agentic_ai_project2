@@ -1,0 +1,7 @@
+# .windsurfrules
+- Never choose architecture or design patterns unilaterally. If a design decision is needed, stop and ask me, don't assume.
+- Always add error handling for: API timeout, empty response, malformed JSON, rate limit exceeded. Never write a happy-path-only function for anything calling OpenAI, Cohere, ChromaDB, or Postgres.
+- Every function that calls an external API must be wrapped for retry (tenacity) and must log via src/observability/logging_config.py.
+- After writing any function, explain in 3-5 sentences what it does and what happens on empty/malformed/oversized input.
+- Follow the existing folder structure exactly: src/ingest, src/retrieval, src/query, src/eval, src/db, src/observability, src/resilience.
+- Never touch data/, docs/adr/, or eval_queries.json unless explicitly asked.
