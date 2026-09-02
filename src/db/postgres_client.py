@@ -1,173 +1,216 @@
 import os
-import uuid
-from typing import Optional, Dict, Any
-from datetime import datetime
-import psycopg2
-from psycopg2 import pool, sql, DatabaseError
-from psycopg2.extras import register_uuid
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-import logging
+from typing import Optional
+from dotenv import load_dotenv
+from psycopg import Connection, sql
+from psycopg_pool import ConnectionPool
+from psycopg.errors import Error as PsycopgError
 
 from src.observability.logging_config import get_logger
 
-logger = get_logger(__name__)
+log = get_logger(__name__)
 
-# Register UUID adapter for psycopg2
-register_uuid()
+# Load environment variables from .env file
+load_dotenv()
 
 
 class PostgresClient:
-    """PostgreSQL client with connection pooling for eval_runs operations."""
+    """
+    PostgreSQL client with connection pooling for pgvector-backed RAG system.
     
-    _pool: Optional[pool.ThreadedConnectionPool] = None
+    Manages database connections via psycopg_pool.ConnectionPool and provides
+    health checking for required extensions (pgvector). Credentials are loaded
+    from environment variables via python-dotenv.
     
-    @classmethod
-    def initialize_pool(cls, min_conn: int = 1, max_conn: int = 10) -> None:
-        """Initialize the connection pool."""
-        if cls._pool is not None:
-            logger.warning("Connection pool already initialized")
-            return
+    Environment variables required:
+        POSTGRES_HOST: Database host address
+        POSTGRES_PORT: Database port (default: 5432)
+        POSTGRES_DB: Database name
+        POSTGRES_USER: Database user
+        POSTGRES_PASSWORD: Database password
+    """
+    
+    def __init__(
+        self,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+        dbname: Optional[str] = None,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        min_pool_size: int = 1,
+        max_pool_size: int = 10,
+    ):
+        """
+        Initialize PostgreSQL connection pool.
+        
+        Args:
+            host: Database host (defaults to POSTGRES_HOST env var)
+            port: Database port (defaults to POSTGRES_PORT env var or 5432)
+            dbname: Database name (defaults to POSTGRES_DB env var)
+            user: Database user (defaults to POSTGRES_USER env var)
+            password: Database password (defaults to POSTGRES_PASSWORD env var)
+            min_pool_size: Minimum number of connections in pool
+            max_pool_size: Maximum number of connections in pool
+            
+        Raises:
+            ValueError: If required environment variables are not set
+            PsycopgError: If connection pool initialization fails
+        """
+        self.host = host or os.getenv("POSTGRES_HOST")
+        self.port = port or int(os.getenv("POSTGRES_PORT", "5432"))
+        self.dbname = dbname or os.getenv("POSTGRES_DB")
+        self.user = user or os.getenv("POSTGRES_USER")
+        self.password = password or os.getenv("POSTGRES_PASSWORD")
+        
+        if not all([self.host, self.dbname, self.user, self.password]):
+            missing = []
+            if not self.host:
+                missing.append("POSTGRES_HOST")
+            if not self.dbname:
+                missing.append("POSTGRES_DB")
+            if not self.user:
+                missing.append("POSTGRES_USER")
+            if not self.password:
+                missing.append("POSTGRES_PASSWORD")
+            raise ValueError(
+                f"Missing required environment variables: {', '.join(missing)}. "
+                "Please set these in your .env file or environment."
+            )
+        
+        self.conninfo = (
+            f"host={self.host} port={self.port} dbname={self.dbname} "
+            f"user={self.user} password={self.password}"
+        )
         
         try:
-            cls._pool = pool.ThreadedConnectionPool(
-                minconn=min_conn,
-                maxconn=max_conn,
-                dbname=os.getenv("POSTGRES_DB", "postgres"),
-                user=os.getenv("POSTGRES_USER", "postgres"),
-                password=os.getenv("POSTGRES_PASSWORD", ""),
-                host=os.getenv("POSTGRES_HOST", "localhost"),
-                port=os.getenv("POSTGRES_PORT", "5432"),
-                connect_timeout=5
+            self.pool = ConnectionPool(
+                self.conninfo,
+                min_size=min_pool_size,
+                max_size=max_pool_size,
+                open=True,
             )
-            logger.info("PostgreSQL connection pool initialized", extra={"min_conn": min_conn, "max_conn": max_conn})
-        except DatabaseError as e:
-            logger.error("Failed to initialize PostgreSQL connection pool", extra={"error": str(e)})
+            log.info(
+                "PostgreSQL connection pool initialized",
+                extra={
+                    "host": self.host,
+                    "port": self.port,
+                    "dbname": self.dbname,
+                    "user": self.user,
+                    "min_pool_size": min_pool_size,
+                    "max_pool_size": max_pool_size,
+                }
+            )
+        except PsycopgError as e:
+            log.error(
+                "Failed to initialize PostgreSQL connection pool",
+                extra={"error": str(e), "host": self.host, "port": self.port}
+            )
             raise
     
-    @classmethod
-    def get_connection(cls):
-        """Get a connection from the pool."""
-        if cls._pool is None:
-            cls.initialize_pool()
-        return cls._pool.getconn()
+    def get_connection(self) -> Connection:
+        """
+        Get a connection from the pool.
+        
+        Returns:
+            Connection: Active database connection from pool
+            
+        Raises:
+            PsycopgError: If connection cannot be obtained from pool
+        """
+        try:
+            conn = self.pool.getconn()
+            log.debug("Connection acquired from pool")
+            return conn
+        except PsycopgError as e:
+            log.error("Failed to acquire connection from pool", extra={"error": str(e)})
+            raise
     
-    @classmethod
-    def return_connection(cls, conn):
-        """Return a connection to the pool."""
-        if cls._pool is not None:
-            cls._pool.putconn(conn)
+    def return_connection(self, conn: Connection) -> None:
+        """
+        Return a connection to the pool.
+        
+        Args:
+            conn: Connection to return to pool
+        """
+        try:
+            self.pool.putconn(conn)
+            log.debug("Connection returned to pool")
+        except PsycopgError as e:
+            log.error("Failed to return connection to pool", extra={"error": str(e)})
+            raise
     
-    @classmethod
-    def close_pool(cls) -> None:
-        """Close all connections in the pool."""
-        if cls._pool is not None:
-            cls._pool.closeall()
-            cls._pool = None
-            logger.info("PostgreSQL connection pool closed")
+    def check_extension_health(self) -> None:
+        """
+        Check if pgvector extension is installed and enabled.
+        
+        Runs SELECT * FROM pg_extension WHERE extname = 'vector' to verify
+        the pgvector extension is available. Raises a clear exception if missing.
+        
+        Raises:
+            RuntimeError: If pgvector extension is not found in database
+            PsycopgError: If query execution fails
+        """
+        query = sql.SQL("SELECT * FROM pg_extension WHERE extname = %s")
+        
+        try:
+            conn = self.get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(query, ("vector",))
+                    result = cur.fetchone()
+                    
+                    if result is None:
+                        raise RuntimeError(
+                            "CRITICAL: pgvector extension is not installed in the database. "
+                            "Please run 'CREATE EXTENSION vector;' in your PostgreSQL database "
+                            "before using this RAG system. The pgvector extension is required "
+                            "for vector similarity search functionality."
+                        )
+                    
+                    log.info("pgvector extension health check passed")
+            finally:
+                self.return_connection(conn)
+                
+        except RuntimeError:
+            raise
+        except PsycopgError as e:
+            log.error(
+                "Failed to check pgvector extension health",
+                extra={"error": str(e)}
+            )
+            raise
+    
+    def close(self) -> None:
+        """
+        Close the connection pool and release all resources.
+        
+        Should be called when shutting down the application.
+        """
+        try:
+            self.pool.close()
+            log.info("PostgreSQL connection pool closed")
+        except PsycopgError as e:
+            log.error("Error closing connection pool", extra={"error": str(e)})
+            raise
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - ensures pool is closed."""
+        self.close()
+        return False
 
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=1, max=10),
-    retry=retry_if_exception_type(DatabaseError),
-    reraise=True
-)
-def insert_eval_run(
-    query_id: str,
-    strategy: str,
-    collection: str,
-    faithfulness: Optional[float] = None,
-    answer_relevancy: Optional[float] = None,
-    context_precision: Optional[float] = None,
-    latency_ms: Optional[int] = None,
-    cost_usd: Optional[float] = None,
-    timestamp: Optional[datetime] = None
-) -> uuid.UUID:
+def get_postgres_client() -> PostgresClient:
     """
-    Insert an evaluation run into the eval_runs table.
-    
-    Args:
-        query_id: Identifier for the query being evaluated
-        strategy: Retrieval strategy used
-        collection: Collection name queried
-        faithfulness: Faithfulness score (0-1)
-        answer_relevancy: Answer relevancy score (0-1)
-        context_precision: Context precision score (0-1)
-        latency_ms: Latency in milliseconds
-        cost_usd: Cost in USD
-        timestamp: Timestamp of the run (defaults to current time)
+    Factory function to create a PostgresClient instance from environment variables.
     
     Returns:
-        UUID of the inserted run
-    
+        PostgresClient: Configured client instance
+        
     Raises:
-        DatabaseError: If insertion fails after retries
-        ValueError: If required fields are empty or invalid
+        ValueError: If required environment variables are not set
+        PsycopgError: If connection pool initialization fails
     """
-    # Validate required fields
-    if not query_id or not isinstance(query_id, str):
-        raise ValueError("query_id must be a non-empty string")
-    if not strategy or not isinstance(strategy, str):
-        raise ValueError("strategy must be a non-empty string")
-    if not collection or not isinstance(collection, str):
-        raise ValueError("collection must be a non-empty string")
-    
-    # Validate score ranges
-    for score_name, score_value in [
-        ("faithfulness", faithfulness),
-        ("answer_relevancy", answer_relevancy),
-        ("context_precision", context_precision)
-    ]:
-        if score_value is not None and (not isinstance(score_value, (int, float)) or score_value < 0 or score_value > 1):
-            logger.warning(f"Invalid {score_name} score, must be between 0 and 1", extra={score_name: score_value})
-    
-    run_id = uuid.uuid4()
-    conn = None
-    
-    try:
-        conn = PostgresClient.get_connection()
-        cursor = conn.cursor()
-        
-        insert_query = sql.SQL("""
-            INSERT INTO eval_runs (run_id, query_id, strategy, collection, faithfulness, 
-                                  answer_relevancy, context_precision, latency_ms, cost_usd, timestamp)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """)
-        
-        cursor.execute(insert_query, (
-            run_id,
-            query_id,
-            strategy,
-            collection,
-            faithfulness,
-            answer_relevancy,
-            context_precision,
-            latency_ms,
-            cost_usd,
-            timestamp or datetime.utcnow()
-        ))
-        
-        conn.commit()
-        logger.info("Eval run inserted successfully", extra={
-            "run_id": str(run_id),
-            "query_id": query_id,
-            "strategy": strategy,
-            "collection": collection,
-            "latency_ms": latency_ms,
-            "cost_usd": cost_usd
-        })
-        
-        return run_id
-        
-    except DatabaseError as e:
-        if conn:
-            conn.rollback()
-        logger.error("Failed to insert eval run", extra={
-            "query_id": query_id,
-            "strategy": strategy,
-            "error": str(e)
-        })
-        raise
-    finally:
-        if conn:
-            PostgresClient.return_connection(conn)
+    return PostgresClient()
