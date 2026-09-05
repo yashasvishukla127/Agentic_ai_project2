@@ -10,5 +10,19 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  pgbouncer:
+    image: edoburu/pgbouncer
+    environment:
+      # Tells PgBouncer how to connect to the 'db' service above
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 100
+      DEFAULT_POOL_SIZE: 20
+    ports:
+      - "${PGBOUNCER_PORT}:6432"
+    depends_on:
+      - db
+
 volumes:
   pgdata:

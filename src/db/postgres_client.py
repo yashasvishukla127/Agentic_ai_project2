@@ -2,7 +2,7 @@ import os
 from typing import Optional
 from dotenv import load_dotenv
 from psycopg import Connection, sql
-from psycopg_pool import ConnectionPool
+from psycopg_pool import ConnectionPool, PoolTimeout
 from psycopg.errors import Error as PsycopgError
 
 from src.observability.logging_config import get_logger
@@ -20,6 +20,12 @@ class PostgresClient:
     Manages database connections via psycopg_pool.ConnectionPool and provides
     health checking for required extensions (pgvector). Credentials are loaded
     from environment variables via python-dotenv.
+    
+    Features:
+        - Connection pooling with configurable min/max sizes
+        - Strict 3-second timeout for connection acquisition
+        - Critical-level logging on pool timeout for monitoring visibility
+        - Extension health checking for pgvector
     
     Environment variables required:
         POSTGRES_HOST: Database host address
@@ -54,6 +60,11 @@ class PostgresClient:
         Raises:
             ValueError: If required environment variables are not set
             PsycopgError: If connection pool initialization fails
+            
+        Note:
+            Connection pool has a strict 3-second timeout configured. If a connection
+            cannot be acquired within this time, a PoolTimeout exception is raised
+            and a critical-level log is emitted for monitoring visibility.
         """
         self.host = host or os.getenv("POSTGRES_HOST")
         self.port = port or int(os.getenv("POSTGRES_PORT", "5432"))
@@ -87,6 +98,7 @@ class PostgresClient:
                 min_size=min_pool_size,
                 max_size=max_pool_size,
                 open=True,
+                timeout=3.0,
             )
             log.info(
                 "PostgreSQL connection pool initialized",
@@ -108,18 +120,35 @@ class PostgresClient:
     
     def get_connection(self) -> Connection:
         """
-        Get a connection from the pool.
+        Get a connection from the pool with strict 3-second timeout.
+        
+        If a connection cannot be acquired within 3 seconds, a PoolTimeout
+        exception is raised immediately and a critical-level log is emitted
+        for monitoring visibility.
         
         Returns:
             Connection: Active database connection from pool
             
         Raises:
+            PoolTimeout: If connection cannot be acquired within 3 seconds
             PsycopgError: If connection cannot be obtained from pool
         """
         try:
             conn = self.pool.getconn()
             log.debug("Connection acquired from pool")
             return conn
+        except PoolTimeout as e:
+            log.critical(
+                "Connection pool timeout - unable to acquire connection within 3 seconds",
+                extra={
+                    "error": str(e),
+                    "timeout_seconds": 3.0,
+                    "host": self.host,
+                    "port": self.port,
+                    "dbname": self.dbname,
+                }
+            )
+            raise
         except PsycopgError as e:
             log.error("Failed to acquire connection from pool", extra={"error": str(e)})
             raise
@@ -130,6 +159,9 @@ class PostgresClient:
         
         Args:
             conn: Connection to return to pool
+            
+        Raises:
+            PsycopgError: If connection cannot be returned to pool
         """
         try:
             self.pool.putconn(conn)

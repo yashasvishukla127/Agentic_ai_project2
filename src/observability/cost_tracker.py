@@ -29,6 +29,41 @@ PRICING = {
 COST_CSV_PATH = Path("Logs/costs.csv")
 
 
+class CostTracker:
+    """Track estimated token usage and cost for embedding requests in one run."""
+
+    EMBEDDING_COSTS_PER_1K_TOKENS = {
+        "text-embedding-3-small": 0.00002,
+        "text-embedding-3-large": 0.00013,
+        "text-embedding-ada-002": 0.00010,
+    }
+
+    def __init__(self, model: Optional[str] = None) -> None:
+        self.model = model or os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+        if self.model not in self.EMBEDDING_COSTS_PER_1K_TOKENS:
+            raise ValueError(f"Unsupported embedding model for cost tracking: {self.model}")
+        self.total_tokens = 0
+        self.total_cost_usd = 0.0
+
+    def track_embedding_cost(self, text_length: int) -> None:
+        """Add an estimated embedding charge (approximately four characters per token)."""
+        if text_length < 0:
+            raise ValueError("text_length cannot be negative")
+
+        estimated_tokens = (text_length + 3) // 4
+        self.total_tokens += estimated_tokens
+        self.total_cost_usd += (
+            estimated_tokens / 1_000 * self.EMBEDDING_COSTS_PER_1K_TOKENS[self.model]
+        )
+
+    def get_summary(self) -> Dict[str, float | int]:
+        """Return the estimated embedding usage accumulated for this run."""
+        return {
+            "total_tokens": self.total_tokens,
+            "total_cost_usd": self.total_cost_usd,
+        }
+
+
 def _ensure_csv_header() -> None:
     """Ensure the CSV file exists with headers."""
     try:

@@ -30,7 +30,8 @@ CREATE TABLE eval_runs (
 );
 
 -- HNSW index on document_chunks.embedding using cosine distance
-CREATE INDEX ON document_chunks USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX ON document_chunks USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);
 
 -- B-tree index on document_chunks(collection, chunking_strategy) for filtering
 CREATE INDEX ON document_chunks (collection, chunking_strategy);
