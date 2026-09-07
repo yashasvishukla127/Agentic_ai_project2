@@ -51,7 +51,7 @@ def setup_database():
             with conn.cursor() as cur:
                 # Split by semicolon to handle multiple statements
                 statements = [stmt.strip() for stmt in schema_sql.split(';') if stmt.strip()]
-                
+                # it take one big sql string and turn into individual SQL command
                 for statement in statements:
                     if statement:
                         cur.execute(statement)

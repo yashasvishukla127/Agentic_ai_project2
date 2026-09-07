@@ -1,5 +1,7 @@
 import argparse
+import hashlib
 import os
+import uuid
 from typing import Any, Dict, List, Optional, Protocol
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -85,7 +87,7 @@ class EmbedderAndStore:
         
         if self.embedding_model not in self.SUPPORTED_MODELS:
             raise ValueError(
-                f"Unsupported embedding model: {self.embedding_model}. "F
+                f"Unsupported embedding model: {self.embedding_model}."
                 f"Supported models: {list(self.SUPPORTED_MODELS.keys())}"
             )
         
@@ -134,6 +136,40 @@ class EmbedderAndStore:
             "cost_per_1k_tokens": model_costs.get(self.embedding_model, 0.0),
             "supported_models": list(self.SUPPORTED_MODELS.keys()),
         }
+    
+    def _generate_chunk_id(
+        self,
+        source_file: str,
+        chunking_strategy: str,
+        chunk_index: int,
+        content: str
+    ) -> str:
+        """
+        Generate a deterministic chunk ID using SHA256 hash.
+        
+        The ID is computed as sha256(source_file + chunking_strategy + chunk_index + content),
+        truncated to a UUID-compatible format. This ensures re-processing the same document
+        with the same strategy always produces the same chunk IDs.
+        
+        Args:
+            source_file: Source file name
+            chunking_strategy: Chunking strategy used
+            chunk_index: Index of the chunk in the document
+            content: Content of the chunk
+            
+        Returns:
+            UUID string generated from deterministic hash
+        """
+        # Create a deterministic string combining all factors
+        hash_input = f"{source_file}|{chunking_strategy}|{chunk_index}|{content}"
+        
+        # Generate SHA256 hash
+        hash_bytes = hashlib.sha256(hash_input.encode('utf-8')).digest()
+        
+        # Convert first 16 bytes to UUID format (UUID uses 128 bits = 16 bytes)
+        chunk_uuid = uuid.UUID(bytes=hash_bytes[:16])
+        
+        return str(chunk_uuid)
     
     @retry(
         stop=stop_after_attempt(MAX_RETRIES),
@@ -217,6 +253,9 @@ class EmbedderAndStore:
         """
         Store a single chunk with its embedding in the database.
         
+        Uses a deterministic chunk ID generated from source_file, chunking_strategy,
+        chunk_index, and content to ensure re-processing produces the same IDs.
+        
         Args:
             chunk: Chunk dictionary with 'content', 'source_file', 'chunk_index'
             embedding: Embedding vector
@@ -232,19 +271,35 @@ class EmbedderAndStore:
             if field not in chunk:
                 raise ValueError(f"Chunk missing required field: {field}")
         
+        # Generate deterministic chunk ID
+        chunk_id = self._generate_chunk_id(
+            source_file=chunk['source_file'],
+            chunking_strategy=chunking_strategy,
+            chunk_index=chunk['chunk_index'],
+            content=chunk['content']
+        )
+        
         try:
             conn = self.postgres_client.get_connection()
             try:
+                # Create a cursor to execute SQL commands
                 with conn.cursor() as cur:
                     query = sql.SQL("""
                         INSERT INTO document_chunks 
-                        (collection, content, embedding, source_file, chunk_index, chunking_strategy)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        (id, collection, content, embedding, source_file, chunk_index, chunking_strategy)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO UPDATE SET
+                            content = EXCLUDED.content,
+                            embedding = EXCLUDED.embedding,
+                            source_file = EXCLUDED.source_file,
+                            chunk_index = EXCLUDED.chunk_index,
+                            chunking_strategy = EXCLUDED.chunking_strategy
                     """)
-                    
+                    # Execute INSERT and provide values for each %s
                     cur.execute(
                         query,
                         (
+                            chunk_id,
                             collection,
                             chunk['content'],
                             embedding,
@@ -253,12 +308,13 @@ class EmbedderAndStore:
                             chunking_strategy
                         )
                     )
-                    
+                    # Save/commit the INSERT to PostgreSQL
                     conn.commit()
-                    
+                    # Write a debug log confirming the chunk was stored
                     log.debug(
                         "Chunk stored successfully",
                         extra={
+                            "chunk_id": chunk_id,
                             "collection": collection,
                             "source_file": chunk['source_file'],
                             "chunk_index": chunk['chunk_index'],
@@ -273,6 +329,7 @@ class EmbedderAndStore:
                 "Failed to store chunk in database",
                 extra={
                     "error": str(e),
+                    "chunk_id": chunk_id,
                     "collection": collection,
                     "source_file": chunk.get('source_file'),
                     "chunk_index": chunk.get('chunk_index')
@@ -313,58 +370,149 @@ class EmbedderAndStore:
         if chunking_strategy not in ['naive', 'semantic', 'hyde']:
             raise ValueError(f"Invalid chunking strategy: {chunking_strategy}. Must be 'naive', 'semantic', or 'hyde'")
         
+        # Get source file from first chunk
+        source_file = chunks[0]['source_file']
+        
+        # Check for prior runs with running or failed status
+        prior_run = self.postgres_client.get_prior_ingestion_run(source_file, chunking_strategy)
+        run_id = None
+        stored_count = 0
+        
+        if prior_run and prior_run['status'] in ['running', 'failed']:
+            chunks_remaining = prior_run['total_chunks'] - prior_run['chunks_completed']
+            log.info(
+                f"Resuming ingestion run - prior run {prior_run['status']}",
+                extra={
+                    "prior_run_id": prior_run['id'],
+                    "prior_status": prior_run['status'],
+                    "prior_chunks_completed": prior_run['chunks_completed'],
+                    "chunks_remaining": chunks_remaining,
+                    "source_file": source_file,
+                    "chunking_strategy": chunking_strategy
+                }
+            )
+            # Update prior run to running status
+            self.postgres_client.update_ingestion_run(
+                run_id=prior_run['id'],
+                status='running'
+            )
+            run_id = prior_run['id']
+            stored_count = prior_run['chunks_completed']
+        else:
+            # Create new ingestion run
+            run_id = self.postgres_client.create_ingestion_run(
+                source_file=source_file,
+                chunking_strategy=chunking_strategy,
+                total_chunks=len(chunks)
+            )
+        
         log.info(
             "Starting embed and store process",
             extra={
                 "collection": collection,
                 "chunking_strategy": chunking_strategy,
-                "total_chunks": len(chunks)
+                "total_chunks": len(chunks),
+                "run_id": run_id
             }
         )
         
-        stored_count = 0
-        
-        for i, chunk in enumerate(chunks):
-            try:
-                # Embed the chunk
-                embedding = self._embed_text(chunk['content'])
-                
-                # Validate first embedding dimension if requested
-                if validate_first_embedding and i == 0:
-                    self._validate_embedding_dimension(embedding)
-                    log.info(
-                        "First embedding dimension validated",
-                        extra={"dimension": len(embedding)}
+        try:
+            for i, chunk in enumerate(chunks):
+                try:
+                    # Generate chunk ID before embedding to check existence
+                    chunk_id = self._generate_chunk_id(
+                        source_file=chunk['source_file'],
+                        chunking_strategy=chunking_strategy,
+                        chunk_index=chunk['chunk_index'],
+                        content=chunk['content']
                     )
-                
-                # Store the chunk
-                self._store_chunk(chunk, embedding, collection, chunking_strategy)
-                stored_count += 1
-                
-            except (ValueError, OpenAIError, PsycopgError) as e:
-                log.error(
-                    "Failed to process chunk",
-                    extra={
-                        "error": str(e),
-                        "chunk_index": i,
-                        "source_file": chunk.get('source_file'),
-                        "collection": collection
-                    }
-                )
-                raise
-        
-        log.info(
-            "Embed and store process completed",
-            extra={
-                "collection": collection,
-                "chunking_strategy": chunking_strategy,
-                "stored_count": stored_count,
-                "total_chunks": len(chunks)
-            }
-        )
-        
-        return stored_count
+                    
+                    # Check if chunk already exists - skip embedding if it does
+                    if self.postgres_client.chunk_already_ingested(chunk_id):
+                        log.info(
+                            f"skipping already-ingested chunk {chunk_id}",
+                            extra={
+                                "chunk_id": chunk_id,
+                                "source_file": chunk['source_file'],
+                                "chunk_index": chunk['chunk_index']
+                            }
+                        )
+                        continue
+                    
+                    # Embed the chunk
+                    embedding = self._embed_text(chunk['content'])
+                    
+                    # Validate first embedding dimension if requested
+                    if validate_first_embedding and i == 0:
+                        self._validate_embedding_dimension(embedding)
+                        log.info(
+                            "First embedding dimension validated",
+                            extra={"dimension": len(embedding)}
+                        )
+                    
+                    # Store the chunk
+                    self._store_chunk(chunk, embedding, collection, chunking_strategy)
+                    stored_count += 1
+                    
+                    # Update chunks completed count
+                    self.postgres_client.update_ingestion_run(
+                        run_id=run_id,
+                        chunks_completed=stored_count
+                    )
+                    
+                except (ValueError, OpenAIError, PsycopgError) as e:
+                    log.error(
+                        "Failed to process chunk",
+                        extra={
+                            "error": str(e),
+                            "chunk_index": i,
+                            "source_file": chunk.get('source_file'),
+                            "collection": collection
+                        }
+                    )
+                    # Mark run as failed
+                    self.postgres_client.update_ingestion_run(
+                        run_id=run_id,
+                        status='failed'
+                    )
+                    raise
+            
+            # Mark run as completed
+            self.postgres_client.update_ingestion_run(
+                run_id=run_id,
+                status='completed'
+            )
+            
+            log.info(
+                "Embed and store process completed",
+                extra={
+                    "collection": collection,
+                    "chunking_strategy": chunking_strategy,
+                    "stored_count": stored_count,
+                    "total_chunks": len(chunks),
+                    "run_id": run_id
+                }
+            )
+            
+            return stored_count
+            
+        except (ValueError, OpenAIError, PsycopgError) as e:
+            # Mark run as failed if not already marked
+            self.postgres_client.update_ingestion_run(
+                run_id=run_id,
+                status='failed'
+            )
+            raise
 
+
+    #              SAME PROGRAM
+    #                   │
+    #     ┌─────────────┼─────────────┐
+    #     ▼             ▼             ▼
+    # sales + naive  sales + semantic  mortgage + semantic
+# python ingest.py --collection sales_psychology --strategy naive
+# python ingest.py --collection sales_psychology --strategy semantic
+# python ingest.py --collection mortgage_domain --strategy semantic
 
 def _build_argument_parser() -> argparse.ArgumentParser:
     """Create the command-line interface for document ingestion."""

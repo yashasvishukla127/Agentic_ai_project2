@@ -40,6 +40,12 @@ This will create:
 - `eval_runs` table for evaluation metrics
 - Required pgvector extension check
 
+**Important**: If you have an existing database with the old schema (using random UUIDs), you'll need to either:
+1. Drop and recreate the tables, or
+2. Manually alter the schema to remove the DEFAULT gen_random_uuid() from the id column
+
+**Note**: The schema uses deterministic chunk IDs (SHA256-based) instead of random UUIDs. This means re-processing the same document with the same strategy will produce identical chunk IDs, enabling idempotent ingestion.
+
 ### 2. Run Ingestion Pipeline
 
 #### Using Naive Chunking (512-character fixed chunks):
@@ -72,6 +78,9 @@ python -m src.ingest.run_ingestion --strategy naive
 3. **Embedding**: Calls OpenAI embedding model for each chunk
 4. **Validation**: Ensures embeddings match expected dimensions for the model
 5. **Storage**: Inserts chunks with embeddings into `document_chunks` table
+   - Uses deterministic chunk IDs based on SHA256 hash of (source_file + chunking_strategy + chunk_index + content)
+   - Re-processing the same document with the same strategy produces identical chunk IDs
+   - Uses upsert logic (ON CONFLICT DO UPDATE) to handle re-processing gracefully
 6. **Cost Tracking**: Logs total API cost and token usage
 
 ## Supported OpenAI Embedding Models
@@ -121,12 +130,18 @@ SELECT collection, COUNT(*) FROM document_chunks GROUP BY collection;
 -- Check by chunking strategy
 SELECT chunking_strategy, COUNT(*) FROM document_chunks GROUP BY chunking_strategy;
 
--- Sample data
-SELECT id, collection, source_file, chunk_index, chunking_strategy, 
-       LENGTH(content) as content_length, 
+-- Sample data (note: chunk IDs are deterministic, not random)
+SELECT id, collection, source_file, chunk_index, chunking_strategy,
+       LENGTH(content) as content_length,
        array_length(embedding, 1) as embedding_dim
-FROM document_chunks 
+FROM document_chunks
 LIMIT 5;
+
+-- Check for duplicate chunk IDs (should be none if using deterministic IDs)
+SELECT id, COUNT(*) as count
+FROM document_chunks
+GROUP BY id
+HAVING COUNT(*) > 1;
 ```
 
 ## Cost Estimates
@@ -142,3 +157,23 @@ After ingestion, you can:
 1. Query the embeddings using the retrieval system
 2. Run evaluation queries to test retrieval quality
 3. Compare different chunking strategies
+
+## Deterministic Chunk IDs
+
+The ingestion system uses deterministic chunk IDs instead of random UUIDs. Each chunk ID is generated as:
+
+```
+SHA256(source_file + "|" + chunking_strategy + "|" + chunk_index + "|" + content) -> truncated to UUID format
+```
+
+**Benefits:**
+- **Idempotent ingestion**: Re-processing the same document with the same strategy produces identical chunk IDs
+- **Deduplication**: The same chunk won't be stored multiple times
+- **Reproducibility**: Same input always produces same output
+- **Upsert support**: Uses ON CONFLICT DO UPDATE to handle re-processing gracefully
+
+**Example:**
+- Processing `sales_psychology.md` with `naive` strategy always produces the same chunk ID for chunk 0
+- If you re-run the ingestion, it will update the existing chunk instead of creating duplicates
+- Changing the chunking strategy to `semantic` will produce different chunk IDs (since the strategy is part of the hash)
+- Content changes will also produce different chunk IDs (since content is part of the hash)
