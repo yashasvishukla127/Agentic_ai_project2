@@ -249,18 +249,24 @@ class EmbedderAndStore:
         embedding: List[float],
         collection: str,
         chunking_strategy: str
-    ) -> None:
+    ) -> bool:
         """
         Store a single chunk with its embedding in the database.
         
         Uses a deterministic chunk ID generated from source_file, chunking_strategy,
         chunk_index, and content to ensure re-processing produces the same IDs.
         
+        Uses postgres_client.insert_chunk() which implements ON CONFLICT (id) DO NOTHING,
+        meaning duplicate chunks are silently skipped.
+        
         Args:
             chunk: Chunk dictionary with 'content', 'source_file', 'chunk_index'
             embedding: Embedding vector
             collection: Collection name ('sales_psychology' or 'mortgage_domain')
             chunking_strategy: Chunking strategy ('naive', 'semantic', or 'hyde')
+            
+        Returns:
+            True if chunk was inserted, False if it already existed
             
         Raises:
             PsycopgError: If database operation fails
@@ -279,63 +285,41 @@ class EmbedderAndStore:
             content=chunk['content']
         )
         
-        try:
-            conn = self.postgres_client.get_connection()
-            try:
-                # Create a cursor to execute SQL commands
-                with conn.cursor() as cur:
-                    query = sql.SQL("""
-                        INSERT INTO document_chunks 
-                        (id, collection, content, embedding, source_file, chunk_index, chunking_strategy)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (id) DO UPDATE SET
-                            content = EXCLUDED.content,
-                            embedding = EXCLUDED.embedding,
-                            source_file = EXCLUDED.source_file,
-                            chunk_index = EXCLUDED.chunk_index,
-                            chunking_strategy = EXCLUDED.chunking_strategy
-                    """)
-                    # Execute INSERT and provide values for each %s
-                    cur.execute(
-                        query,
-                        (
-                            chunk_id,
-                            collection,
-                            chunk['content'],
-                            embedding,
-                            chunk['source_file'],
-                            chunk['chunk_index'],
-                            chunking_strategy
-                        )
-                    )
-                    # Save/commit the INSERT to PostgreSQL
-                    conn.commit()
-                    # Write a debug log confirming the chunk was stored
-                    log.debug(
-                        "Chunk stored successfully",
-                        extra={
-                            "chunk_id": chunk_id,
-                            "collection": collection,
-                            "source_file": chunk['source_file'],
-                            "chunk_index": chunk['chunk_index'],
-                            "chunking_strategy": chunking_strategy
-                        }
-                    )
-            finally:
-                self.postgres_client.return_connection(conn)
-                
-        except PsycopgError as e:
-            log.error(
-                "Failed to store chunk in database",
+        # Use postgres_client method for insertion with ON CONFLICT DO NOTHING
+        inserted = self.postgres_client.insert_chunk(
+            chunk_id=chunk_id,
+            collection=collection,
+            content=chunk['content'],
+            embedding=embedding,
+            source_file=chunk['source_file'],
+            chunk_index=chunk['chunk_index'],
+            chunking_strategy=chunking_strategy
+        )
+        
+        if inserted:
+            log.debug(
+                "Chunk stored successfully",
                 extra={
-                    "error": str(e),
                     "chunk_id": chunk_id,
                     "collection": collection,
-                    "source_file": chunk.get('source_file'),
-                    "chunk_index": chunk.get('chunk_index')
+                    "source_file": chunk['source_file'],
+                    "chunk_index": chunk['chunk_index'],
+                    "chunking_strategy": chunking_strategy
                 }
             )
-            raise
+        else:
+            log.debug(
+                "Chunk already exists, skipped",
+                extra={
+                    "chunk_id": chunk_id,
+                    "collection": collection,
+                    "source_file": chunk['source_file'],
+                    "chunk_index": chunk['chunk_index'],
+                    "chunking_strategy": chunking_strategy
+                }
+            )
+        
+        return inserted
     
     def embed_and_store_chunks(
         self,
@@ -343,7 +327,7 @@ class EmbedderAndStore:
         collection: str,
         chunking_strategy: str,
         validate_first_embedding: bool = True
-    ) -> int:
+    ) -> Dict[str, int]:
         """
         Embed and store chunks in the database.
         
@@ -354,7 +338,7 @@ class EmbedderAndStore:
             validate_first_embedding: Whether to validate first embedding dimension
             
         Returns:
-            Number of chunks successfully stored
+            Dictionary with 'inserted' and 'skipped' counts
             
         Raises:
             ValueError: If chunks is empty, collection invalid, or embedding dimension wrong
@@ -376,7 +360,8 @@ class EmbedderAndStore:
         # Check for prior runs with running or failed status
         prior_run = self.postgres_client.get_prior_ingestion_run(source_file, chunking_strategy)
         run_id = None
-        stored_count = 0
+        inserted_count = 0
+        skipped_count = 0
         
         if prior_run and prior_run['status'] in ['running', 'failed']:
             chunks_remaining = prior_run['total_chunks'] - prior_run['chunks_completed']
@@ -397,7 +382,7 @@ class EmbedderAndStore:
                 status='running'
             )
             run_id = prior_run['id']
-            stored_count = prior_run['chunks_completed']
+            inserted_count = prior_run['chunks_completed']
         else:
             # Create new ingestion run
             run_id = self.postgres_client.create_ingestion_run(
@@ -429,6 +414,7 @@ class EmbedderAndStore:
                     
                     # Check if chunk already exists - skip embedding if it does
                     if self.postgres_client.chunk_already_ingested(chunk_id):
+                        skipped_count += 1
                         log.info(
                             f"skipping already-ingested chunk {chunk_id}",
                             extra={
@@ -450,14 +436,14 @@ class EmbedderAndStore:
                             extra={"dimension": len(embedding)}
                         )
                     
-                    # Store the chunk
-                    self._store_chunk(chunk, embedding, collection, chunking_strategy)
-                    stored_count += 1
+                    # Store the chunk (returns True if inserted, False if skipped)
+                    if self._store_chunk(chunk, embedding, collection, chunking_strategy):
+                        stored_count += 1
                     
                     # Update chunks completed count
                     self.postgres_client.update_ingestion_run(
                         run_id=run_id,
-                        chunks_completed=stored_count
+                        chunks_completed=inserted_count
                     )
                     
                 except (ValueError, OpenAIError, PsycopgError) as e:
@@ -488,13 +474,18 @@ class EmbedderAndStore:
                 extra={
                     "collection": collection,
                     "chunking_strategy": chunking_strategy,
-                    "stored_count": stored_count,
+                    "inserted_count": inserted_count,
+                    "skipped_count": skipped_count,
                     "total_chunks": len(chunks),
                     "run_id": run_id
                 }
             )
             
-            return stored_count
+            return {
+                "inserted": inserted_count,
+                "skipped": skipped_count,
+                "total": len(chunks)
+            }
             
         except (ValueError, OpenAIError, PsycopgError) as e:
             # Mark run as failed if not already marked
@@ -553,7 +544,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         postgres_client = PostgresClient()
         postgres_client.check_extension_health()
 
-        stored_count = EmbedderAndStore(postgres_client).embed_and_store_chunks(
+        result = EmbedderAndStore(postgres_client).embed_and_store_chunks(
             chunks=chunks,
             collection=args.collection,
             chunking_strategy=args.strategy,
@@ -563,9 +554,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             extra={
                 "collection": args.collection,
                 "chunking_strategy": args.strategy,
-                "stored_count": stored_count,
+                "inserted_count": result['inserted'],
+                "skipped_count": result['skipped'],
+                "total_chunks": result['total'],
             },
         )
+        print(f"✅ Ingestion completed: {result['inserted']} inserted, {result['skipped']} skipped, {result['total']} total")
         return 0
     except (OSError, ValueError, OpenAIError, PsycopgError, RuntimeError) as error:
         log.error("Document ingestion failed", extra={"error": str(error)})

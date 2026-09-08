@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from dotenv import load_dotenv
 from psycopg import Connection, sql
 from psycopg_pool import ConnectionPool, PoolTimeout
@@ -247,6 +247,101 @@ class PostgresClient:
             log.error(
                 "Failed to check chunk existence",
                 extra={"error": str(e), "chunk_id": chunk_id}
+            )
+            raise
+    
+    def insert_chunk(
+        self,
+        chunk_id: str,
+        collection: str,
+        content: str,
+        embedding: List[float],
+        source_file: str,
+        chunk_index: int,
+        chunking_strategy: str
+    ) -> bool:
+        """
+        Insert a chunk with its embedding into the database.
+        
+        Uses ON CONFLICT (id) DO NOTHING to handle duplicate chunk IDs gracefully.
+        If a chunk with the same ID already exists, the insert is skipped silently.
+        
+        Args:
+            chunk_id: Deterministic UUID string for the chunk
+            collection: Collection name ('sales_psychology' or 'mortgage_domain')
+            content: Chunk content text
+            embedding: Embedding vector
+            source_file: Source file name
+            chunk_index: Index of the chunk in the document
+            chunking_strategy: Chunking strategy used
+            
+        Returns:
+            True if chunk was inserted, False if it already existed
+            
+        Raises:
+            PsycopgError: If database operation fails
+            ValueError: If any required parameter is invalid
+        """
+        if collection not in ['sales_psychology', 'mortgage_domain']:
+            raise ValueError(f"Invalid collection: {collection}")
+        
+        if chunking_strategy not in ['naive', 'semantic', 'hyde']:
+            raise ValueError(f"Invalid chunking strategy: {chunking_strategy}")
+        
+        query = sql.SQL("""
+            INSERT INTO document_chunks 
+            (id, collection, content, embedding, source_file, chunk_index, chunking_strategy)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO NOTHING
+        """)
+        
+        try:
+            conn = self.get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        query,
+                        (
+                            chunk_id,
+                            collection,
+                            content,
+                            embedding,
+                            source_file,
+                            chunk_index,
+                            chunking_strategy
+                        )
+                    )
+                    conn.commit()
+                    
+                    # Check if the insert actually happened
+                    inserted = cur.rowcount > 0
+                    
+                    log.debug(
+                        "Chunk insert completed",
+                        extra={
+                            "chunk_id": chunk_id,
+                            "collection": collection,
+                            "source_file": source_file,
+                            "chunk_index": chunk_index,
+                            "chunking_strategy": chunking_strategy,
+                            "inserted": inserted,
+                            "skipped": not inserted
+                        }
+                    )
+                    
+                    return inserted
+            finally:
+                self.return_connection(conn)
+                
+        except PsycopgError as e:
+            log.error(
+                "Failed to insert chunk",
+                extra={
+                    "error": str(e),
+                    "chunk_id": chunk_id,
+                    "collection": collection,
+                    "source_file": source_file
+                }
             )
             raise
     

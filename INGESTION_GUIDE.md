@@ -71,6 +71,8 @@ export OPENAI_EMBEDDING_MODEL=text-embedding-3-large
 python -m src.ingest.run_ingestion --strategy naive
 ```
 
+**Note**: Due to deterministic chunk IDs and ON CONFLICT DO NOTHING, re-running the same ingestion will skip existing chunks and only process new ones. The output will show both inserted and skipped counts.
+
 ## What Happens During Ingestion
 
 1. **Document Loading**: Reads `data/sales_psychology.md` and `data/mortgage_domain.md`
@@ -80,7 +82,7 @@ python -m src.ingest.run_ingestion --strategy naive
 5. **Storage**: Inserts chunks with embeddings into `document_chunks` table
    - Uses deterministic chunk IDs based on SHA256 hash of (source_file + chunking_strategy + chunk_index + content)
    - Re-processing the same document with the same strategy produces identical chunk IDs
-   - Uses upsert logic (ON CONFLICT DO UPDATE) to handle re-processing gracefully
+   - Uses ON CONFLICT (id) DO NOTHING to skip duplicate chunks without updating existing ones
 6. **Cost Tracking**: Logs total API cost and token usage
 
 ## Supported OpenAI Embedding Models
@@ -170,10 +172,10 @@ SHA256(source_file + "|" + chunking_strategy + "|" + chunk_index + "|" + content
 - **Idempotent ingestion**: Re-processing the same document with the same strategy produces identical chunk IDs
 - **Deduplication**: The same chunk won't be stored multiple times
 - **Reproducibility**: Same input always produces same output
-- **Upsert support**: Uses ON CONFLICT DO UPDATE to handle re-processing gracefully
+- **Skip logic**: Uses ON CONFLICT (id) DO NOTHING to skip existing chunks without modifying them
 
 **Example:**
 - Processing `sales_psychology.md` with `naive` strategy always produces the same chunk ID for chunk 0
-- If you re-run the ingestion, it will update the existing chunk instead of creating duplicates
+- If you re-run the ingestion, it will skip existing chunks without updating them
 - Changing the chunking strategy to `semantic` will produce different chunk IDs (since the strategy is part of the hash)
 - Content changes will also produce different chunk IDs (since content is part of the hash)

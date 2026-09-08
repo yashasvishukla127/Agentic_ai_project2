@@ -100,14 +100,14 @@ def run_ingestion(chunking_strategy: str = "naive", embedding_model: str = None)
             )
             
             # Embed and store chunks
-            stored_count = embedder_store.embed_and_store_chunks(
+            result = embedder_store.embed_and_store_chunks(
                 chunks=chunks,
                 collection=collection,
                 chunking_strategy=chunking_strategy,
                 validate_first_embedding=True
             )
             
-            total_chunks_stored += stored_count
+            total_chunks_stored += result['inserted']
             log.info(
                 f"Chunks stored: {collection}",
                 extra={"collection": collection, "stored_count": stored_count}
@@ -128,7 +128,7 @@ def run_ingestion(chunking_strategy: str = "naive", embedding_model: str = None)
         print(f"\n✅ Ingestion completed successfully!")
         print(f"   Strategy: {chunking_strategy}")
         print(f"   Embedding model: {embedder_store.embedding_model}")
-        print(f"   Total chunks stored: {total_chunks_stored}")
+        print(f"   Total chunks processed: {total_chunks_stored}")
         print(f"   Total cost: ${cost_summary['total_cost_usd']:.4f}")
         print(f"   Total tokens: {cost_summary['total_tokens']}")
         
