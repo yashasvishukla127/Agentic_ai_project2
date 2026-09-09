@@ -358,6 +358,16 @@ class EmbedderAndStore:
         source_file = chunks[0]['source_file']
         
         # Check for prior runs with running or failed status
+                # sales.pdf
+                # semantic
+                # ↓
+                # Previous run found
+                # ↓
+                # run-123
+                # ↓
+                # FAILED
+                # ↓
+                # 60 / 100 chunks completed
         prior_run = self.postgres_client.get_prior_ingestion_run(source_file, chunking_strategy)
         run_id = None
         inserted_count = 0
@@ -438,7 +448,7 @@ class EmbedderAndStore:
                     
                     # Store the chunk (returns True if inserted, False if skipped)
                     if self._store_chunk(chunk, embedding, collection, chunking_strategy):
-                        stored_count += 1
+                        inserted_count += 1
                     
                     # Update chunks completed count
                     self.postgres_client.update_ingestion_run(

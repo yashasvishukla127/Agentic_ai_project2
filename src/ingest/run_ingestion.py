@@ -110,7 +110,7 @@ def run_ingestion(chunking_strategy: str = "naive", embedding_model: str = None)
             total_chunks_stored += result['inserted']
             log.info(
                 f"Chunks stored: {collection}",
-                extra={"collection": collection, "stored_count": stored_count}
+                extra={"collection": collection, "stored_count": result['inserted']}
             )
         
         # Log final cost summary
