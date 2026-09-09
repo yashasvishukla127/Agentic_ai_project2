@@ -36,6 +36,8 @@ CREATE TABLE ingestion_runs (
     chunking_strategy TEXT NOT NULL CHECK (chunking_strategy IN ('naive', 'semantic', 'hyde')),
     total_chunks INTEGER NOT NULL,
     chunks_completed INTEGER NOT NULL DEFAULT 0,
+    chunks_skipped INTEGER NOT NULL DEFAULT 0,
+    chunks_added INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed')),
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

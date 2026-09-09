@@ -9,7 +9,7 @@ This test verifies that:
 """
 import pytest
 import os
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 from typing import Dict, Any, List
 
 from src.db.postgres_client import PostgresClient
@@ -82,12 +82,16 @@ def test_ingestion_crash_recovery(postgres_client, sample_chunks, mock_embedding
     3. Assert exactly 10 rows exist (not 16 - no duplicates)
     4. Assert OpenAI embedding API was called exactly 4 times on second run (chunks 7-10 only)
     """
-    # Clean up any existing test data
-    cleanup_query = "DELETE FROM document_chunks WHERE source_file = %s"
+    # Clean up any prior test data and run records so this test is rerunnable.
+    cleanup_queries = (
+        "DELETE FROM document_chunks WHERE source_file = %s",
+        "DELETE FROM ingestion_runs WHERE source_file = %s",
+    )
     conn = postgres_client.get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(cleanup_query, ('test_document.txt',))
+            for cleanup_query in cleanup_queries:
+                cur.execute(cleanup_query, ('test_document.txt',))
             conn.commit()
     finally:
         postgres_client.return_connection(conn)
@@ -111,88 +115,97 @@ def test_ingestion_crash_recovery(postgres_client, sample_chunks, mock_embedding
             embedding_model='text-embedding-3-small'
         )
         
-        # Mock ingestion run tracking methods to avoid dependency on ingestion_runs table
-        with patch.object(postgres_client, 'get_prior_ingestion_run', return_value=None):
-            with patch.object(postgres_client, 'create_ingestion_run', return_value='test-run-id'):
-                with patch.object(postgres_client, 'update_ingestion_run'):
-                    # Track call count for the mock
-                    embedding_call_count = {'count': 0}
-                    
-                    def track_embedding_calls(*args, **kwargs):
-                        embedding_call_count['count'] += 1
-                        # Simulate crash after chunk 6 (i.e., on the 7th call)
-                        if embedding_call_count['count'] == 7:
-                            raise RuntimeError("Simulated crash after chunk 6")
-                        return mock_embedding_response
-                    
-                    mock_client.embeddings.create.side_effect = track_embedding_calls
-                    
-                    # First run: should crash after chunk 6
-                    with pytest.raises(RuntimeError, match="Simulated crash after chunk 6"):
-                        embedder_store.embed_and_store_chunks(
-                            chunks=sample_chunks,
-                            collection='sales_psychology',
-                            chunking_strategy='naive',
-                            validate_first_embedding=False
-                        )
-                    
-                    # Verify that 6 chunks were stored before crash
-                    count_query = "SELECT COUNT(*) FROM document_chunks WHERE source_file = %s"
-                    conn = postgres_client.get_connection()
-                    try:
-                        with conn.cursor() as cur:
-                            cur.execute(count_query, ('test_document.txt',))
-                            chunk_count = cur.fetchone()[0]
-                    finally:
-                        postgres_client.return_connection(conn)
-                    
-                    assert chunk_count == 6, f"Expected 6 chunks after crash, got {chunk_count}"
-                    
-                    # Reset the mock for the second run
-                    mock_client.embeddings.create.side_effect = None
-                    mock_client.embeddings.create.reset_mock()
-                    embedding_call_count['count'] = 0
-                    
-                    # Second run: should only process chunks 7-10 (4 chunks)
-                    result = embedder_store.embed_and_store_chunks(
-                        chunks=sample_chunks,
-                        collection='sales_psychology',
-                        chunking_strategy='naive',
-                        validate_first_embedding=False
-                    )
-                    
-                    # Verify final state: exactly 10 chunks (no duplicates)
-                    conn = postgres_client.get_connection()
-                    try:
-                        with conn.cursor() as cur:
-                            cur.execute(count_query, ('test_document.txt',))
-                            final_chunk_count = cur.fetchone()[0]
-                    finally:
-                        postgres_client.return_connection(conn)
-                    
-                    assert final_chunk_count == 10, (
-                        f"Expected exactly 10 chunks after recovery, got {final_chunk_count}. "
-                        "This suggests duplicates were created."
-                    )
-                    
-                    # Verify OpenAI embedding API was called exactly 4 times (chunks 7-10 only)
-                    assert mock_client.embeddings.create.call_count == 4, (
-                        f"Expected OpenAI embedding API to be called 4 times on second run, "
-                        f"but it was called {mock_client.embeddings.create.call_count} times. "
-                        "This suggests already-ingested chunks were re-embedded."
-                    )
-                    
-                    # Verify the result indicates 4 inserted and 6 skipped
-                    assert result['inserted'] == 4, (
-                        f"Expected 4 chunks to be inserted on second run, got {result['inserted']}"
-                    )
-                    assert result['skipped'] == 6, (
-                        f"Expected 6 chunks to be skipped on second run, got {result['skipped']}"
-                    )
-                    
-                    print(f"\nIngestion crash recovery test passed:")
-                    print(f"   - 6 chunks stored before crash")
-                    print(f"   - 4 chunks inserted on recovery (chunks 7-10)")
-                    print(f"   - 6 chunks skipped (already ingested)")
-                    print(f"   - Final total: 10 chunks (no duplicates)")
-                    print(f"   - OpenAI API calls on second run: 4 (optimal)")
+        # Track call count for the mock.
+        embedding_call_count = {'count': 0}
+
+        def track_embedding_calls(*args, **kwargs):
+            embedding_call_count['count'] += 1
+            # Simulate crash after chunk 6 (i.e., on the 7th call).
+            if embedding_call_count['count'] == 7:
+                raise RuntimeError("Simulated crash after chunk 6")
+            return mock_embedding_response
+
+        mock_client.embeddings.create.side_effect = track_embedding_calls
+
+        # First run: should crash after chunk 6.
+        with pytest.raises(RuntimeError, match="Simulated crash after chunk 6"):
+            embedder_store.embed_and_store_chunks(
+                chunks=sample_chunks,
+                collection='sales_psychology',
+                chunking_strategy='naive',
+                validate_first_embedding=False
+            )
+
+        # Verify that 6 chunks were stored before crash.
+        count_query = "SELECT COUNT(*) FROM document_chunks WHERE source_file = %s"
+        conn = postgres_client.get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(count_query, ('test_document.txt',))
+                chunk_count = cur.fetchone()[0]
+        finally:
+            postgres_client.return_connection(conn)
+
+        assert chunk_count == 6, f"Expected 6 chunks after crash, got {chunk_count}"
+
+        # Reset the mock for the second run.
+        mock_client.embeddings.create.side_effect = None
+        mock_client.embeddings.create.reset_mock()
+
+        # Use a new instance to simulate a process restart, not an in-memory resume.
+        recovered_embedder_store = EmbedderAndStore(
+            postgres_client=postgres_client,
+            openai_api_key='test_key',
+            embedding_model='text-embedding-3-small'
+        )
+
+        # Second run: should only process chunks 7-10 (4 chunks).
+        result = recovered_embedder_store.embed_and_store_chunks(
+            chunks=sample_chunks,
+            collection='sales_psychology',
+            chunking_strategy='naive',
+            validate_first_embedding=False
+        )
+
+        # Verify final state and persisted run metrics.
+        run_query = """
+            SELECT chunks_skipped, chunks_added, status
+            FROM ingestion_runs
+            WHERE source_file = %s AND chunking_strategy = %s
+            ORDER BY started_at DESC
+            LIMIT 1
+        """
+        conn = postgres_client.get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(count_query, ('test_document.txt',))
+                final_chunk_count = cur.fetchone()[0]
+                cur.execute(run_query, ('test_document.txt', 'naive'))
+                ingestion_run = cur.fetchone()
+        finally:
+            postgres_client.return_connection(conn)
+
+        assert final_chunk_count == 10, (
+            f"Expected exactly 10 chunks after recovery, got {final_chunk_count}. "
+            "This suggests duplicates were created."
+        )
+        assert ingestion_run is not None, "Expected a persisted ingestion run for the test document"
+        chunks_skipped, chunks_added, status = ingestion_run
+        assert chunks_skipped == 6, f"Expected 6 persisted skipped chunks, got {chunks_skipped}"
+        assert chunks_added == 4, f"Expected 4 persisted added chunks, got {chunks_added}"
+        assert status == 'completed', f"Expected completed ingestion run, got {status}"
+
+        # Verify OpenAI embedding API was called exactly 4 times (chunks 7-10 only).
+        assert mock_client.embeddings.create.call_count == 4, (
+            f"Expected OpenAI embedding API to be called 4 times on second run, "
+            f"but it was called {mock_client.embeddings.create.call_count} times. "
+            "This suggests already-ingested chunks were re-embedded."
+        )
+
+        # Keep result assertions as a complementary API-contract check.
+        assert result['inserted'] == 4, (
+            f"Expected 4 chunks to be inserted on second run, got {result['inserted']}"
+        )
+        assert result['skipped'] == 6, (
+            f"Expected 6 chunks to be skipped on second run, got {result['skipped']}"
+        )

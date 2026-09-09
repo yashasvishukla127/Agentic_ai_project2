@@ -367,8 +367,8 @@ class PostgresClient:
         """
         query = sql.SQL("""
             INSERT INTO ingestion_runs 
-            (source_file, chunking_strategy, total_chunks, chunks_completed, status)
-            VALUES (%s, %s, %s, 0, 'running')
+            (source_file, chunking_strategy, total_chunks, chunks_completed, chunks_skipped, chunks_added, status)
+            VALUES (%s, %s, %s, 0, 0, 0, 'running')
             RETURNING id
         """)
         
@@ -421,7 +421,7 @@ class PostgresClient:
         """
         query = sql.SQL("""
             SELECT id, source_file, chunking_strategy, total_chunks, 
-                   chunks_completed, status, started_at, updated_at
+                   chunks_completed, chunks_skipped, chunks_added, status, started_at, updated_at
             FROM ingestion_runs
             WHERE source_file = %s AND chunking_strategy = %s
             ORDER BY started_at DESC
@@ -442,9 +442,11 @@ class PostgresClient:
                             "chunking_strategy": result[2],
                             "total_chunks": result[3],
                             "chunks_completed": result[4],
-                            "status": result[5],
-                            "started_at": result[6],
-                            "updated_at": result[7]
+                            "chunks_skipped": result[5],
+                            "chunks_added": result[6],
+                            "status": result[7],
+                            "started_at": result[8],
+                            "updated_at": result[9]
                         }
                     return None
             finally:
@@ -461,6 +463,8 @@ class PostgresClient:
         self,
         run_id: str,
         chunks_completed: Optional[int] = None,
+        chunks_skipped: Optional[int] = None,
+        chunks_added: Optional[int] = None,
         status: Optional[str] = None
     ) -> None:
         """
@@ -469,6 +473,8 @@ class PostgresClient:
         Args:
             run_id: UUID string of the ingestion run
             chunks_completed: New chunks completed count (optional)
+            chunks_skipped: New chunks skipped count (optional)
+            chunks_added: New chunks added count (optional)
             status: New status (optional)
             
         Raises:
@@ -481,6 +487,14 @@ class PostgresClient:
             updates.append(sql.SQL("chunks_completed = %s"))
             params.append(chunks_completed)
         
+        if chunks_skipped is not None:
+            updates.append(sql.SQL("chunks_skipped = %s"))
+            params.append(chunks_skipped)
+        
+        if chunks_added is not None:
+            updates.append(sql.SQL("chunks_added = %s"))
+            params.append(chunks_added)
+        
         if status is not None:
             updates.append(sql.SQL("status = %s"))
             params.append(status)
@@ -488,9 +502,9 @@ class PostgresClient:
         updates.append(sql.SQL("updated_at = NOW()"))
         params.append(run_id)
         
-        query = sql.SQL("UPDATE ingestion_runs SET {} WHERE id = %s".format(
+        query = sql.SQL("UPDATE ingestion_runs SET {} WHERE id = %s").format(
             sql.SQL(", ").join(updates)
-        ))
+        )
         
         try:
             conn = self.get_connection()

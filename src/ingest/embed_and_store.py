@@ -372,6 +372,7 @@ class EmbedderAndStore:
         run_id = None
         inserted_count = 0
         skipped_count = 0
+        added_count = 0
         
         if prior_run and prior_run['status'] in ['running', 'failed']:
             chunks_remaining = prior_run['total_chunks'] - prior_run['chunks_completed']
@@ -449,6 +450,7 @@ class EmbedderAndStore:
                     # Store the chunk (returns True if inserted, False if skipped)
                     if self._store_chunk(chunk, embedding, collection, chunking_strategy):
                         inserted_count += 1
+                        added_count += 1
                     
                     # Update chunks completed count
                     self.postgres_client.update_ingestion_run(
@@ -473,9 +475,17 @@ class EmbedderAndStore:
                     )
                     raise
             
-            # Mark run as completed
+            # Log summary before marking run as completed
+            log.info(
+                f'Ingestion complete for {source_file} ({chunking_strategy}): {skipped_count} chunks already present (skipped), {added_count} chunks newly added, {skipped_count + added_count} total processed.'
+            )
+            
+            # Mark run as completed with final counts
             self.postgres_client.update_ingestion_run(
                 run_id=run_id,
+                chunks_completed=inserted_count,
+                chunks_skipped=skipped_count,
+                chunks_added=added_count,
                 status='completed'
             )
             
@@ -486,13 +496,17 @@ class EmbedderAndStore:
                     "chunking_strategy": chunking_strategy,
                     "inserted_count": inserted_count,
                     "skipped_count": skipped_count,
+                    "added_count": added_count,
                     "total_chunks": len(chunks),
                     "run_id": run_id
                 }
             )
             
             return {
-                "inserted": inserted_count,
+                # `inserted` describes work performed by this invocation. The
+                # cumulative progress for a resumed run is persisted separately
+                # as `chunks_completed`.
+                "inserted": added_count,
                 "skipped": skipped_count,
                 "total": len(chunks)
             }
