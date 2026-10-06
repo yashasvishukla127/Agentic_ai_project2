@@ -1,0 +1,1012 @@
+# =============================================================================
+# sales_plays.yaml — Sales, persuasion and negotiation play cards
+# Collection: sales_psychology (play-card format)
+# =============================================================================
+#
+# WHAT THIS IS
+#   One card per technique, distilled in our own words from these books:
+#     - Never Split the Difference (Chris Voss)
+#     - Exactly What to Say (Phil M. Jones)
+#     - SPIN Selling (Neil Rackham)
+#     - Influence + Yes! (Robert Cialdini et al.)
+#     - $100M Offers (Alex Hormozi)
+#     - The Mom Test (Rob Fitzpatrick)
+#     - The Challenger Sale (Dixon & Adamson)
+#     - How to Win Friends & Influence People (Dale Carnegie)
+#   No book text is copied. Example replies are original.
+#
+# HOW TO INGEST
+#   - One card = one retrievable unit. Never split a card.
+#   - Embed each `lead_says` phrase (plus `when_to_use`) as its own vector
+#     row, all pointing to the card `id`. Return the whole card to the LLM.
+#   - Filter by `stage` / `objection_type` before vector search when the
+#     conversation stage is known. Dedupe hits by `id`, keep top 3-5 cards.
+#   - Cards with `stage: always` are tone/ethics rules: load them into the
+#     system prompt instead of retrieving them.
+#
+# FIELDS
+#   id               unique kebab-case, prefixed by source (voss-, jones-, ...)
+#   book             source book
+#   technique        name of the technique
+#   stage            opening | qualifying | value | objection | next_step |
+#                    follow_up | always
+#   objection_type   price | timing | trust | competitor | authority |
+#                    think_about_it | not_interested | none
+#   lead_says        3-5 example lead messages that should trigger this card
+#   when_to_use      the situation, in one or two sentences
+#   do               what the AI should do
+#   example_replies  1-3 original example replies (text channel)
+#   avoid            what not to do
+#   related          ids of related cards
+#
+# ADDING CARDS
+#   Copy any card, give it a new unique id, keep each card under ~1,200
+#   characters, and write lead_says the way real leads actually type.
+#   Bump `version` below when you change cards.
+# =============================================================================
+
+version: 1
+updated: 2026-10-06
+
+cards:
+
+  # ---------------------------------------------------------------------------
+  # ALWAYS-ON RULES (put these in the system prompt, not retrieval)
+  # ---------------------------------------------------------------------------
+
+  - id: rule-honest-persuasion
+    book: Influence (Cialdini)
+    technique: Ethical use of influence
+    stage: always
+    objection_type: none
+    lead_says: []
+    when_to_use: Every reply.
+    do: Only use scarcity, urgency, social proof and authority when they are true and checkable. Real deadlines, real numbers, real reviews. If you don't know a fact, say you'll confirm it.
+    example_replies:
+      - "Rates are moving this week, so I can't promise today's number will hold. If you want, I can check what a lock would look like."
+    avoid: Invented deadlines, fake "only 2 spots left", made-up customer counts, guaranteed outcomes.
+    related: [cialdini-scarcity, cialdini-social-proof]
+
+  - id: rule-carnegie-tone
+    book: How to Win Friends & Influence People (Carnegie)
+    technique: Warm, lead-centred tone
+    stage: always
+    objection_type: none
+    lead_says: []
+    when_to_use: Every reply.
+    do: Use the lead's name naturally. Talk about their goals, not your product. Show genuine interest with one specific question. Give honest, specific appreciation. Never tell them they're wrong; agree with what's true first.
+    example_replies:
+      - "Thanks for the detail, Priya, that helps a lot. Moving closer to your parents makes sense. What's the timeline you're working towards?"
+    avoid: Arguing, correcting the lead bluntly, talking mostly about yourself, generic flattery.
+    related: [carnegie-avoid-arguing, rule-short-replies]
+
+  - id: rule-short-replies
+    book: Exactly What to Say (Jones)
+    technique: One message, one job
+    stage: always
+    objection_type: none
+    lead_says: []
+    when_to_use: Every reply.
+    do: Keep replies short (2-4 sentences in chat/SMS). Each message does one job and ends with one clear question or next step. Match the lead's length and formality.
+    example_replies:
+      - "Got it. Quick question so I point you the right way: are you buying your first home or moving from one you own?"
+    avoid: Walls of text, several questions at once, ending without a question or next step.
+    related: [spin-advance-not-close]
+
+  - id: rule-mom-test-questions
+    book: The Mom Test (Fitzpatrick)
+    technique: Ask about real past behaviour, not hypotheticals
+    stage: always
+    objection_type: none
+    lead_says: []
+    when_to_use: Any time the AI is asking discovery or qualifying questions.
+    do: Ask about what the lead has actually done and what is true now ("What have you tried so far?", "When did this last come up?"). Treat compliments and "sounds great" as noise; commitments (time, info, a call booked) are the real signal.
+    example_replies:
+      - "Have you already spoken to a lender or looked at anything yet, or is this the first step?"
+    avoid: '"Would you be interested in…?", "Do you think this would help?", fishing for compliments, treating "sounds great" as a yes.'
+    related: [mom-test-commitment-signal, spin-situation]
+
+  # ---------------------------------------------------------------------------
+  # OPENING / FIRST REPLY
+  # ---------------------------------------------------------------------------
+
+  - id: carnegie-first-reply
+    book: How to Win Friends & Influence People (Carnegie)
+    technique: Lead with their interest
+    stage: opening
+    objection_type: none
+    lead_says:
+      - "hi I filled out the form"
+      - "I'm interested, can you tell me more"
+      - "saw your ad, how does this work"
+      - "hey, looking for some info"
+    when_to_use: The lead's first message, usually short and vague.
+    do: Thank them, reflect anything they shared, and ask one easy question about their goal. Don't pitch yet.
+    example_replies:
+      - "Hi Sam, thanks for reaching out! Happy to help. What's prompting you to look into this right now?"
+      - "Thanks for getting in touch. So I don't send you a pile of generic info, what are you hoping to sort out?"
+    avoid: Dumping product details, pricing or links in the first reply.
+    related: [spin-situation, jones-just-out-of-curiosity]
+
+  - id: jones-just-out-of-curiosity
+    book: Exactly What to Say (Jones)
+    technique: '"Just out of curiosity" softener'
+    stage: opening
+    objection_type: none
+    lead_says:
+      - "just looking"
+      - "just browsing for now"
+      - "not sure yet"
+      - "only gathering info"
+    when_to_use: The lead is guarded and you need information without sounding pushy.
+    do: Lower the pressure with a curiosity phrase, then ask one specific question.
+    example_replies:
+      - "Totally fine to just look. Just out of curiosity, what caught your eye enough to reach out?"
+    avoid: Pushing for a call immediately, or accepting "just looking" and going silent.
+    related: [carnegie-first-reply, voss-no-oriented-question]
+
+  - id: jones-open-minded
+    book: Exactly What to Say (Jones)
+    technique: "How open-minded are you…"
+    stage: opening
+    objection_type: none
+    lead_says:
+      - "I'm happy with what I've got"
+      - "I already have something in place"
+      - "not sure I need this"
+    when_to_use: The lead leans towards the status quo but hasn't closed the door.
+    do: Ask how open they'd be to an alternative. People like to see themselves as open-minded, so they usually say yes, which opens a short conversation.
+    example_replies:
+      - "Makes sense. How open-minded would you be to a quick comparison, just so you know where you stand?"
+    avoid: Criticising what they already have.
+    related: [challenger-reframe, voss-label-competitor]
+
+  - id: challenger-reframe
+    book: The Challenger Sale (Dixon & Adamson)
+    technique: Teach something new (commercial insight)
+    stage: opening
+    objection_type: none
+    lead_says:
+      - "I already know what I want"
+      - "I've done my research"
+      - "I just need a quote"
+      - "what's your best price"
+    when_to_use: The lead has a fixed view that might be costing them, and you have a genuinely useful, true insight.
+    do: Share one short, surprising, relevant insight about their situation that leads back to what you do well. Then ask a question that makes them think.
+    example_replies:
+      - "Happy to get you a quote. One thing most people don't realise: the headline rate often matters less than the fees and term over the first five years. Would you like me to compare on total cost as well?"
+    avoid: Generic "industry trends", lecturing, insights you can't back up.
+    related: [challenger-tailor, hormozi-value-equation]
+
+  # ---------------------------------------------------------------------------
+  # QUALIFYING / DISCOVERY (SPIN + Mom Test)
+  # ---------------------------------------------------------------------------
+
+  - id: spin-situation
+    book: SPIN Selling (Rackham)
+    technique: Situation questions (use sparingly)
+    stage: qualifying
+    objection_type: none
+    lead_says:
+      - "what do you need to know"
+      - "what info do you need from me"
+      - "ok what's next"
+    when_to_use: You need basic facts to help, and you can't find them in what the lead already shared.
+    do: Ask only the 1-2 situation questions you truly need, one at a time. Never ask what the lead already told you or what the form already captured.
+    example_replies:
+      - "Just two quick ones: roughly what price range are you looking at, and is it just you on the application?"
+    avoid: Long questionnaires, re-asking form fields, more than two facts per message.
+    related: [spin-problem, rule-mom-test-questions]
+
+  - id: spin-problem
+    book: SPIN Selling (Rackham)
+    technique: Problem questions
+    stage: qualifying
+    objection_type: none
+    lead_says:
+      - "my current setup is fine I guess"
+      - "it's ok but not great"
+      - "we're managing"
+      - "I'm not sure what I need"
+    when_to_use: You know the situation; now find what's difficult or frustrating.
+    do: Ask what's hard, slow, costly or annoying about their current situation.
+    example_replies:
+      - "Fair enough. What's the most frustrating part of how it works right now?"
+    avoid: Suggesting the problem for them, or pitching as soon as a problem appears.
+    related: [spin-implication, spin-situation]
+
+  - id: spin-implication
+    book: SPIN Selling (Rackham)
+    technique: Implication questions
+    stage: qualifying
+    objection_type: none
+    lead_says:
+      - "it's a bit annoying"
+      - "it's a small issue"
+      - "yeah that's been a problem"
+      - "we lose some time on it"
+    when_to_use: The lead has named a problem but doesn't feel it's worth acting on yet.
+    do: Ask about the knock-on effects so the lead works out the cost themselves (money, time, stress, missed opportunity). This is the highest-impact question type for bigger decisions.
+    example_replies:
+      - "If the rate stays where it is for another year, what would that mean for your monthly budget?"
+      - "When that happens, what does it end up costing you in time each week?"
+    avoid: Stating the consequences yourself ("This will cost you thousands"), or stacking several implication questions in one message.
+    related: [spin-need-payoff, spin-problem]
+
+  - id: spin-need-payoff
+    book: SPIN Selling (Rackham)
+    technique: Need-payoff questions
+    stage: qualifying
+    objection_type: none
+    lead_says:
+      - "yeah that adds up"
+      - "I hadn't thought of it that way"
+      - "that would be a lot"
+      - "so what can I do about it"
+    when_to_use: The lead now feels the problem. Before presenting the solution, let them say the value in their own words.
+    do: Ask how solving it would help them. Their answer becomes the reason they buy, and it reduces later objections.
+    example_replies:
+      - "If we could bring that monthly payment down, what would that free you up to do?"
+    avoid: Jumping to your pitch before they've said what solving it is worth to them.
+    related: [spin-implication, hormozi-value-equation]
+
+  - id: spin-premature-pitch
+    book: SPIN Selling (Rackham)
+    technique: Don't present the solution too early
+    stage: qualifying
+    objection_type: price
+    lead_says:
+      - "just tell me the price"
+      - "send me the details"
+      - "what do you offer"
+    when_to_use: The lead asks for the pitch before you understand their need.
+    do: Give a brief, honest answer (a range or the key point), then ask one question so your full answer fits them. Presenting too early is a leading cause of price objections.
+    example_replies:
+      - "It usually ranges from X to Y depending on a couple of things. Can I ask one question so I give you the right number rather than a guess?"
+    avoid: Refusing to answer, or sending a full brochure with no context.
+    related: [spin-implication, jones-if-i-could]
+
+  - id: mom-test-commitment-signal
+    book: The Mom Test (Fitzpatrick)
+    technique: Commitments over compliments
+    stage: qualifying
+    objection_type: none
+    lead_says:
+      - "sounds great!"
+      - "this looks really cool"
+      - "love it"
+      - "definitely interested"
+    when_to_use: The lead is enthusiastic but hasn't committed to anything.
+    do: Thank them, then ask for a small, concrete commitment (a time, a document, a decision date). Enthusiasm without a next step is not progress.
+    example_replies:
+      - "Great to hear! The next step is a 15-minute call to check the numbers. Does Thursday or Friday work better?"
+    avoid: Treating excitement as a yes and waiting for them to come back.
+    related: [spin-advance-not-close, jones-either-or]
+
+  - id: mom-test-dig-into-vague
+    book: The Mom Test (Fitzpatrick)
+    technique: Dig into vague answers
+    stage: qualifying
+    objection_type: none
+    lead_says:
+      - "it's kind of important"
+      - "we'll probably do something soon"
+      - "at some point"
+      - "maybe this year"
+    when_to_use: The lead gives a fuzzy answer about importance or timing.
+    do: 'Ask for the concrete detail behind it: what''s driving it, what happens if nothing changes, what date matters.'
+    example_replies:
+      - "When you say soon, is there a date driving it, like a lease ending or a move?"
+    avoid: Accepting "soon" as a timeline.
+    related: [spin-implication, voss-calibrated-question]
+
+  - id: challenger-tailor
+    book: The Challenger Sale (Dixon & Adamson)
+    technique: Tailor to what this lead cares about
+    stage: qualifying
+    objection_type: none
+    lead_says:
+      - "I care most about the monthly payment"
+      - "speed is the main thing for me"
+      - "I just want it to be simple"
+      - "my partner will want to see the numbers"
+    when_to_use: The lead (or someone else involved) has told you their main priority.
+    do: Reframe your value around their stated priority (cost, speed, simplicity, certainty). Same offer, different emphasis.
+    example_replies:
+      - "Then let's focus on the monthly figure. I'll show you two options side by side so you and your partner can compare quickly."
+    avoid: Using the same generic pitch for everyone.
+    related: [challenger-reframe, hormozi-value-equation]
+
+  # ---------------------------------------------------------------------------
+  # VALUE / OFFER FRAMING (Hormozi + Cialdini)
+  # ---------------------------------------------------------------------------
+
+  - id: hormozi-value-equation
+    book: $100M Offers (Hormozi)
+    technique: Value equation framing
+    stage: value
+    objection_type: none
+    lead_says:
+      - "why should I go with you"
+      - "what makes you different"
+      - "what do I get"
+      - "is it worth it"
+    when_to_use: The lead asks about value or difference.
+    do: Frame value on four levers. Raise the dream outcome (what they get) and their confidence it'll work (proof). Lower the time to result and the effort or hassle for them. Pick the 1-2 levers this lead cares about.
+    example_replies:
+      - "You get to the same result (keys in hand), with an answer within 48 hours and us handling the paperwork, so it's less of your evenings spent on forms."
+    avoid: Listing features with no link to outcome, time or effort.
+    related: [hormozi-risk-reversal, challenger-tailor]
+
+  - id: hormozi-risk-reversal
+    book: $100M Offers (Hormozi)
+    technique: Risk reversal / guarantee
+    stage: value
+    objection_type: trust
+    lead_says:
+      - "what if it doesn't work out"
+      - "I don't want to get locked in"
+      - "what's the catch"
+      - "I've been burned before"
+    when_to_use: The lead's hesitation is about risk, not price.
+    do: Name the risk plainly and explain what you do to reduce it (free first step, no obligation, a real guarantee if one exists). Only state guarantees the business actually offers.
+    example_replies:
+      - "Fair question. The first review is free and there's no obligation; if it doesn't make sense for you, you walk away with the numbers anyway."
+    avoid: Inventing guarantees, or brushing off the concern.
+    related: [voss-accusation-audit, rule-honest-persuasion]
+
+  - id: hormozi-bonus-stack
+    book: $100M Offers (Hormozi)
+    technique: Stack value before discussing price
+    stage: value
+    objection_type: price
+    lead_says:
+      - "what's included"
+      - "is that everything"
+      - "what do I get for the price"
+    when_to_use: The lead is weighing price against what they get.
+    do: Briefly list what's included, each tied to a problem it solves for them, before or alongside the price. Make the offer feel bigger than the number.
+    example_replies:
+      - "Included: the rate comparison across lenders, handling the application for you, and a check-in before you lock, so you're not chasing paperwork or second-guessing the timing."
+    avoid: A bare price with nothing around it, or padding with irrelevant extras.
+    related: [hormozi-value-equation, cialdini-contrast]
+
+  - id: cialdini-reciprocity
+    book: Influence (Cialdini)
+    technique: Reciprocity (give first)
+    stage: value
+    objection_type: none
+    lead_says:
+      - "can you send me some info"
+      - "I'm not ready to talk yet"
+      - "do you have anything I can read"
+    when_to_use: The lead isn't ready to commit; give something genuinely useful first.
+    do: Offer something specific and helpful with no strings (a checklist, a quick estimate, an answer to their question). Personalised beats generic.
+    example_replies:
+      - "No problem. Here's a quick checklist of what lenders ask for, so you're ready whenever you decide. Want me to note anything specific to your situation?"
+    avoid: '"Free" gifts that are really a sales pitch, or asking for something in the same message.'
+    related: [cialdini-commitment, mom-test-commitment-signal]
+
+  - id: cialdini-social-proof
+    book: Influence (Cialdini)
+    technique: Social proof (people like them)
+    stage: value
+    objection_type: trust
+    lead_says:
+      - "do other people use this"
+      - "has this worked for anyone like me"
+      - "are you legit"
+      - "any reviews"
+    when_to_use: The lead is uncertain and looking for reassurance.
+    do: Point to real proof from people similar to the lead (same situation, location or goal). Similarity matters more than volume. Only use real, verifiable proof.
+    example_replies:
+      - "Yes, a lot of our clients are first-time buyers on a similar budget. You can see their reviews here: [link]."
+    avoid: Made-up numbers or testimonials, or proof from people nothing like the lead.
+    related: [rule-honest-persuasion, cialdini-authority]
+
+  - id: cialdini-authority
+    book: Influence (Cialdini)
+    technique: Authority (credible expertise)
+    stage: value
+    objection_type: trust
+    lead_says:
+      - "why should I trust you"
+      - "how long have you been doing this"
+      - "are you qualified"
+    when_to_use: The lead questions your credibility.
+    do: State relevant credentials or experience briefly and factually, then return to their need. Admitting a small weakness first increases credibility.
+    example_replies:
+      - "Fair to ask. We're licensed and have been doing this for 8 years. We're not the cheapest, but we're quick and we do the legwork for you."
+    avoid: Overselling, or claiming credentials you don't have.
+    related: [cialdini-social-proof, voss-accusation-audit]
+
+  - id: cialdini-liking
+    book: Influence (Cialdini)
+    technique: Liking (similarity and genuine compliments)
+    stage: value
+    objection_type: none
+    lead_says:
+      - "I'm also from Manchester"
+      - "I'm a teacher"
+      - "we just had a baby"
+    when_to_use: The lead shares something personal.
+    do: Acknowledge it warmly and, if true, mention a genuine point in common. People say yes more to people they like and feel similar to.
+    example_replies:
+      - "Congratulations! That's a big year. Let's make the house side as easy as possible for you."
+    avoid: Fake similarities, overdoing it, or ignoring what they shared.
+    related: [rule-carnegie-tone, carnegie-first-reply]
+
+  - id: cialdini-scarcity
+    book: Influence (Cialdini)
+    technique: Scarcity (only when real)
+    stage: value
+    objection_type: timing
+    lead_says:
+      - "I'll wait and see"
+      - "is there any rush"
+      - "can this wait a few months"
+    when_to_use: There is a real limit (a deadline, rate change, limited availability) the lead should know about.
+    do: Explain what they could lose by waiting, factually. Loss is felt more strongly than gain. If there is no real scarcity, don't create it.
+    example_replies:
+      - "No rush on your side. The one thing to know is that this offer expires on the 30th, so if the numbers work, it's worth deciding before then."
+    avoid: Fake urgency or countdowns. In regulated areas like mortgages, false urgency is a compliance risk.
+    related: [rule-honest-persuasion, voss-label-timing]
+
+  - id: cialdini-commitment
+    book: Influence (Cialdini)
+    technique: Commitment and consistency (small yeses)
+    stage: next_step
+    objection_type: none
+    lead_says:
+      - "maybe"
+      - "I'm open to it"
+      - "possibly"
+    when_to_use: The lead is lukewarm. Get a small, easy, voluntary commitment.
+    do: Ask for a tiny step that matches what they said (answer one question, share one document, pick a time). People act consistently with what they've already agreed to, especially in writing.
+    example_replies:
+      - "Since you're open to it, would you be OK sharing a rough budget? Then I can tell you straight away if it's worth a call."
+    avoid: Jumping to a big ask, or pressuring.
+    related: [spin-advance-not-close, jones-either-or]
+
+  - id: cialdini-contrast
+    book: Influence (Cialdini)
+    technique: Contrast / anchoring
+    stage: value
+    objection_type: price
+    lead_says:
+      - "that seems like a lot"
+      - "how much is it again"
+      - "is that expensive"
+    when_to_use: Price is being judged without a reference point.
+    do: Put the price next to a fair comparison (the cost of the problem, the alternative, or a higher tier). Use a true reference, not an invented one.
+    example_replies:
+      - "The fee is £500. On a 25-year mortgage, a 0.2% better rate saves about £4,000, so it usually pays for itself."
+    avoid: Fake "was £X, now £Y" anchors.
+    related: [hormozi-bonus-stack, voss-label-price]
+
+  - id: cialdini-because
+    book: Yes! (Goldstein, Martin & Cialdini)
+    technique: Give a reason ("because")
+    stage: next_step
+    objection_type: none
+    lead_says:
+      - "why do you need that"
+      - "why do you want to call"
+      - "why are you asking"
+    when_to_use: You ask for anything (info, time, a document).
+    do: Always give the real reason for a request. Requests with a reason get far more yeses.
+    example_replies:
+      - "I ask because your income type changes which lenders will say yes, and I don't want to waste your time on ones that won't."
+    avoid: Requests with no explanation.
+    related: [spin-situation, rule-short-replies]
+
+  - id: yes-unity-identity
+    book: Yes! (Goldstein, Martin & Cialdini)
+    technique: Identity labels
+    stage: next_step
+    objection_type: none
+    lead_says:
+      - "I want to do this properly"
+      - "I like to be prepared"
+      - "I'm pretty organised"
+    when_to_use: The lead describes themselves in a positive way.
+    do: Reflect that identity back and connect the next step to it. People act in line with how they see themselves.
+    example_replies:
+      - "You're clearly someone who likes to be prepared, so getting a decision in principle now fits that. Want me to start it?"
+    avoid: Flattery that isn't based on what they said.
+    related: [cialdini-commitment, cialdini-liking]
+
+  # ---------------------------------------------------------------------------
+  # OBJECTIONS (Voss + Jones + diagnosis)
+  # ---------------------------------------------------------------------------
+
+  - id: objection-diagnose-first
+    book: SPIN Selling / Never Split the Difference
+    technique: Diagnose before answering
+    stage: objection
+    objection_type: none
+    lead_says:
+      - "I'm not sure about this"
+      - "I have some concerns"
+      - "something doesn't feel right"
+      - "hmm not convinced"
+    when_to_use: Any objection, especially a vague one. The stated objection is often not the real one.
+    do: Acknowledge it, then ask one curious, non-defensive question to surface the real concern. Offer 2-3 options if they're stuck.
+    example_replies:
+      - "Totally fair. Is it more the cost, the timing, or whether it's the right fit for you?"
+    avoid: Answering a guess, defending, or sending a wall of reassurance.
+    related: [voss-label, voss-calibrated-question]
+
+  - id: voss-label
+    book: Never Split the Difference (Voss)
+    technique: Labeling
+    stage: objection
+    objection_type: none
+    lead_says:
+      - "this is all so confusing"
+      - "I'm stressed about this"
+      - "I'm worried I'll mess it up"
+      - "I don't really trust these things"
+    when_to_use: The lead shows an emotion or worry.
+    do: Name the emotion you see ("It sounds like…", "It seems like…"), then pause (end the message there, or with one gentle question). Naming a fear calms it.
+    example_replies:
+      - "It sounds like there are a lot of moving parts and you want to be sure you don't miss something."
+    avoid: '"I understand" (too generic), "I" statements ("I hear that you…"), jumping straight to solutions.'
+    related: [voss-accusation-audit, voss-mirror]
+
+  - id: voss-mirror
+    book: Never Split the Difference (Voss)
+    technique: Mirroring
+    stage: objection
+    objection_type: none
+    lead_says:
+      - "it just didn't work last time"
+      - "the other company was a nightmare"
+      - "there were hidden costs"
+    when_to_use: The lead says something important but brief and you need them to say more.
+    do: Repeat their last 1-3 key words as a gentle question. It invites them to expand without you steering.
+    example_replies:
+      - "Hidden costs?"
+      - "A nightmare?"
+    avoid: Mirroring every message (it gets robotic); use it once in a while, on the key phrase.
+    related: [voss-label, mom-test-dig-into-vague]
+
+  - id: voss-calibrated-question
+    book: Never Split the Difference (Voss)
+    technique: Calibrated "how/what" questions
+    stage: objection
+    objection_type: none
+    lead_says:
+      - "I can't do that"
+      - "that doesn't work for me"
+      - "no way"
+      - "that's not possible"
+    when_to_use: The lead pushes back or sets a condition, and you need them to help solve it.
+    do: Ask an open "how" or "what" question that hands them the problem. It gives them a sense of control while moving towards a solution.
+    example_replies:
+      - "What would need to change for this to work for you?"
+      - "How would you like to handle that part?"
+    avoid: '"Why" questions (they sound accusing), yes/no questions, giving in straight away.'
+    related: [voss-how-am-i-supposed, objection-diagnose-first]
+
+  - id: voss-how-am-i-supposed
+    book: Never Split the Difference (Voss)
+    technique: "How am I supposed to do that?"
+    stage: objection
+    objection_type: price
+    lead_says:
+      - "can you do it for half"
+      - "I'll only pay X"
+      - "give me a better deal or I'm out"
+      - "match this price"
+    when_to_use: The lead makes a demand you can't meet. A polite way to say no without saying no.
+    do: Ask, calmly and warmly, how they see that working. It makes them consider your side.
+    example_replies:
+      - "I'd love to make that work. How am I supposed to do it at that price and still do the full comparison for you?"
+    avoid: Caving immediately, or a flat "no".
+    related: [voss-calibrated-question, voss-label-price]
+
+  - id: voss-no-oriented-question
+    book: Never Split the Difference (Voss)
+    technique: No-oriented questions
+    stage: follow_up
+    objection_type: not_interested
+    lead_says:
+      - "not right now"
+      - "I'll get back to you"
+      - "ok"
+      - "thanks"
+    when_to_use: The lead is non-committal or the conversation is stalling. People feel safer saying "no" than "yes".
+    do: Ask a question where "no" moves things forward.
+    example_replies:
+      - "Would it be a bad idea to pencil in 10 minutes next week, just to look at the numbers?"
+      - "Is now a bad time to ask one quick question?"
+    avoid: Pushy yes-questions ("Can we book a call?") when the lead is guarded.
+    related: [voss-given-up, jones-open-minded]
+
+  - id: voss-accusation-audit
+    book: Never Split the Difference (Voss)
+    technique: Accusation audit
+    stage: objection
+    objection_type: trust
+    lead_says:
+      - "you're just trying to sell me something"
+      - "salespeople always say that"
+      - "is this a scam"
+      - "you probably get commission"
+    when_to_use: The lead is suspicious, or before delivering bad news.
+    do: Say the negatives they're probably thinking before they do. It defuses them. Then keep it short and honest.
+    example_replies:
+      - "You might be thinking this is just another sales pitch, and that I'm more interested in the commission than in you. Fair. All I'd suggest is looking at the numbers; if they don't stack up, I'll tell you."
+    avoid: Getting defensive, or over-explaining.
+    related: [voss-label, cialdini-authority]
+
+  - id: voss-thats-right
+    book: Never Split the Difference (Voss)
+    technique: Summarise to get "that's right"
+    stage: objection
+    objection_type: none
+    lead_says:
+      - "you don't get it"
+      - "that's not what I meant"
+      - "let me explain again"
+    when_to_use: The lead doesn't feel understood, or before you suggest a solution.
+    do: Summarise their situation and feelings so well that they reply "that's right". "You're right" means they want you to stop; "that's right" means they feel heard.
+    example_replies:
+      - "Let me check I've got it: you want a lower monthly payment, you don't want to extend the term, and you're worried about fees eating the savings. Is that right?"
+    avoid: Summarising only the facts and missing the feelings.
+    related: [voss-label, spin-need-payoff]
+
+  - id: voss-label-price
+    book: Never Split the Difference (Voss)
+    technique: Label the price objection, then diagnose
+    stage: objection
+    objection_type: price
+    lead_says:
+      - "that's too expensive"
+      - "the price is way higher than I expected"
+      - "I can get it cheaper elsewhere"
+      - "too pricey"
+    when_to_use: The lead pushes back on price before you know whether it's budget, value or a tactic.
+    do: Label the reaction, then ask "compared to what?" or a calibrated question to find out if it's a budget limit, a value gap, or negotiating.
+    example_replies:
+      - "It sounds like the number caught you off guard. Compared to what you had in mind, how far off are we?"
+    avoid: Discounting straight away, or defending the price in a long paragraph.
+    related: [cialdini-contrast, hormozi-bonus-stack, voss-how-am-i-supposed]
+
+  - id: objection-budget
+    book: SPIN Selling / The Challenger Sale
+    technique: Budget doesn't exist vs not prioritised
+    stage: objection
+    objection_type: price
+    lead_says:
+      - "I don't have the budget"
+      - "can't afford it right now"
+      - "money's tight"
+    when_to_use: The lead says they can't afford it.
+    do: Gently find out whether money is truly unavailable or just not prioritised. If unavailable, agree a future trigger. If not prioritised, help them see the return.
+    example_replies:
+      - "Totally understand. Is it that the money isn't there right now, or that it's not clear yet whether it's worth it?"
+    avoid: Pressuring someone who genuinely can't afford it.
+    related: [voss-label-price, spin-implication]
+
+  - id: objection-think-about-it
+    book: Exactly What to Say (Jones) / objection handling
+    technique: "I need to think about it"
+    stage: objection
+    objection_type: think_about_it
+    lead_says:
+      - "I need to think about it"
+      - "let me sleep on it"
+      - "I'll have a think"
+      - "give me some time"
+    when_to_use: A polite stall that usually hides a specific concern.
+    do: Agree, then ask what specifically they'll be thinking about. Offer 2-3 buckets (cost, timing, fit) if they're vague.
+    example_replies:
+      - "Of course, it's a big decision. So I can help when you do, what's the main thing you'll be weighing up: the cost, the timing, or something else?"
+    avoid: '"What''s there to think about?", or letting it go with no follow-up date.'
+    related: [objection-diagnose-first, jones-what-time-works]
+
+  - id: voss-label-timing
+    book: Never Split the Difference (Voss)
+    technique: Timing objection
+    stage: objection
+    objection_type: timing
+    lead_says:
+      - "now isn't a good time"
+      - "maybe next year"
+      - "too busy right now"
+      - "get back to me in a few months"
+    when_to_use: The lead defers. Often it's protecting the status quo rather than real timing.
+    do: Accept it, then ask what needs to happen between now and then. If they can't say, it's probably a soft no.
+    example_replies:
+      - "Completely fair. When would be better, and what would you want to have sorted by then?"
+    avoid: Arguing that now is better, or fake urgency.
+    related: [cialdini-scarcity, jones-what-time-works]
+
+  - id: voss-label-competitor
+    book: Never Split the Difference (Voss)
+    technique: Already working with someone else
+    stage: objection
+    objection_type: competitor
+    lead_says:
+      - "I'm already working with another broker"
+      - "I'm talking to my bank"
+      - "I've got someone already"
+      - "we use another company"
+    when_to_use: The lead has an existing provider.
+    do: Respect the relationship, then ask what would need to be true for them to compare. Don't attack the competitor.
+    example_replies:
+      - "That makes sense, switching isn't something anyone does lightly. What would need to be true for a second opinion to be worth 10 minutes?"
+    avoid: Criticising the competitor.
+    related: [jones-open-minded, challenger-reframe]
+
+  - id: objection-authority
+    book: The Challenger Sale / SPIN Selling
+    technique: Not the only decision-maker
+    stage: objection
+    objection_type: authority
+    lead_says:
+      - "I need to check with my partner"
+      - "my wife handles the finances"
+      - "I'll have to ask my husband"
+      - "my boss decides"
+    when_to_use: Someone else is part of the decision.
+    do: Respect it and make it easy for the lead to share with the other person (a short summary, or inviting them to a call). Ask what the other person usually cares about most.
+    example_replies:
+      - "Of course. What does your partner usually care about most with things like this? I can send a short summary aimed at that, or we can do a quick call with both of you."
+    avoid: Going around the lead, or pushing them to decide alone.
+    related: [challenger-tailor, cialdini-because]
+
+  - id: objection-send-info
+    book: Exactly What to Say (Jones)
+    technique: "Just send me some info"
+    stage: objection
+    objection_type: not_interested
+    lead_says:
+      - "just email me the details"
+      - "send me a brochure"
+      - "just send info"
+    when_to_use: A brush-off that can also be a genuine request.
+    do: Agree, then ask one question so what you send is relevant. Agree when you'll follow up.
+    example_replies:
+      - "Happy to. So I don't send you a generic pack, what's the main thing you want to know? I'll send it today and check in Thursday."
+    avoid: Sending a generic pack and never following up.
+    related: [cialdini-reciprocity, jones-what-time-works]
+
+  - id: objection-not-interested
+    book: Never Split the Difference (Voss)
+    technique: Respectful "not interested"
+    stage: objection
+    objection_type: not_interested
+    lead_says:
+      - "not interested"
+      - "no thanks"
+      - "please stop messaging"
+      - "remove me"
+    when_to_use: The lead clearly says no.
+    do: If they ask to stop or be removed, confirm and stop. Otherwise, thank them, leave the door open once, and stop. Respect builds trust for later.
+    example_replies:
+      - "No problem at all, thanks for letting me know. If anything changes, you know where I am."
+    avoid: Arguing, repeated follow-ups, ignoring opt-out requests.
+    related: [rule-honest-persuasion]
+
+  - id: carnegie-avoid-arguing
+    book: How to Win Friends & Influence People (Carnegie)
+    technique: Don't win the argument
+    stage: objection
+    objection_type: none
+    lead_says:
+      - "you're wrong"
+      - "that's not true"
+      - "I read that rates are going down"
+      - "I don't believe that"
+    when_to_use: The lead disagrees with something you said.
+    do: Find what's true in their point and agree with it first. Then offer your view as a question or as information, not a correction.
+    example_replies:
+      - "You could well be right, some forecasts do show rates easing. The tricky part is no one knows when. Would it help to see both scenarios side by side?"
+    avoid: '"Actually…", "You''re wrong", lecturing.'
+    related: [rule-carnegie-tone, voss-label]
+
+  # ---------------------------------------------------------------------------
+  # NEGOTIATION
+  # ---------------------------------------------------------------------------
+
+  - id: voss-anchor-emotions
+    book: Never Split the Difference (Voss)
+    technique: Anchor expectations and loss
+    stage: objection
+    objection_type: price
+    lead_says:
+      - "what's the best you can do"
+      - "is there any wiggle room"
+      - "can you do a discount"
+    when_to_use: The lead asks for a better deal.
+    do: Frame what they'd lose by not going ahead, and set expectations before you name any concession. Concede in small, decreasing steps, and only with something in return.
+    example_replies:
+      - "There's a bit of room, but not much. If you can go ahead this week, I can take the admin fee off. Would that help?"
+    avoid: Splitting the difference straight away, or big, fast discounts.
+    related: [voss-how-am-i-supposed, voss-concession-for-something]
+
+  - id: voss-concession-for-something
+    book: Never Split the Difference (Voss)
+    technique: Never concede for free
+    stage: objection
+    objection_type: price
+    lead_says:
+      - "can you throw in X"
+      - "if you add this I'll go ahead"
+      - "can you waive the fee"
+    when_to_use: The lead asks for something extra.
+    do: Trade it for something (a decision now, a longer commitment, a referral). Concessions given for nothing reduce perceived value.
+    example_replies:
+      - "I can look into waiving that. If I do, are you happy to get the application started this week?"
+    avoid: Saying yes with nothing in return.
+    related: [voss-anchor-emotions, cialdini-commitment]
+
+  - id: voss-black-swan
+    book: Never Split the Difference (Voss)
+    technique: Look for hidden information (black swans)
+    stage: qualifying
+    objection_type: none
+    lead_says:
+      - "it's complicated"
+      - "there's some other stuff going on"
+      - "it depends on a few things"
+    when_to_use: Something unknown seems to be driving the lead's behaviour.
+    do: Get curious. Ask what's going on in a way that makes it safe to share. The hidden factor often changes the whole conversation.
+    example_replies:
+      - "It sounds like there's more going on in the background. What's the bit that's making it complicated?"
+    avoid: Assuming you know, or ignoring it.
+    related: [voss-label, voss-mirror]
+
+  - id: voss-rule-of-three
+    book: Never Split the Difference (Voss)
+    technique: Rule of three (confirm real commitment)
+    stage: next_step
+    objection_type: none
+    lead_says:
+      - "yes let's do it"
+      - "ok sounds good"
+      - "sure"
+    when_to_use: The lead says yes, but you need to know it's a real yes.
+    do: Confirm the commitment in different ways (once by summarising, once by asking how they'll do the next step). Ask "how" questions about the next step.
+    example_replies:
+      - "Great! To get started, how would you like to send over the documents, upload or email?"
+    avoid: Treating a quick "sure" as done.
+    related: [spin-advance-not-close, mom-test-commitment-signal]
+
+  # ---------------------------------------------------------------------------
+  # NEXT STEP / CLOSING
+  # ---------------------------------------------------------------------------
+
+  - id: spin-advance-not-close
+    book: SPIN Selling (Rackham)
+    technique: Aim for an advance, not a close
+    stage: next_step
+    objection_type: none
+    lead_says:
+      - "what happens now"
+      - "so what's the next step"
+      - "ok so what do I do"
+    when_to_use: The conversation is going well. For bigger decisions, aim for a concrete next step rather than a hard close.
+    do: Propose one specific next step that moves things forward (a call, a document, a decision in principle), with a date.
+    example_replies:
+      - "Next step is a 15-minute call to check your numbers. I have Tuesday at 6pm or Wednesday at noon, which suits?"
+    avoid: Pressure closes, or ending with "let me know".
+    related: [jones-either-or, cialdini-commitment]
+
+  - id: jones-either-or
+    book: Exactly What to Say (Jones)
+    technique: Alternative choice (either/or)
+    stage: next_step
+    objection_type: none
+    lead_says:
+      - "sure let's talk"
+      - "I'm free this week"
+      - "when can we chat"
+    when_to_use: The lead agrees to a next step but no time is set.
+    do: Offer two specific options rather than an open question.
+    example_replies:
+      - "Would mornings or evenings be easier for you?"
+      - "Does Tuesday at 10 or Thursday at 4 work better?"
+    avoid: '"When are you free?" (it creates work and delay).'
+    related: [spin-advance-not-close, jones-what-time-works]
+
+  - id: jones-if-i-could
+    book: Exactly What to Say (Jones)
+    technique: "If I could…, would you…?"
+    stage: next_step
+    objection_type: none
+    lead_says:
+      - "I'd go ahead if it was cheaper"
+      - "if it was faster I'd do it"
+      - "I'd need it by next month"
+    when_to_use: The lead names a condition. Check it's the only thing in the way before you act.
+    do: Ask whether meeting that condition is enough for them to go ahead. It surfaces any other hidden objection.
+    example_replies:
+      - "If I could get you an answer by the end of next week, would you be happy to move forward?"
+    avoid: Meeting the condition first and then finding another objection.
+    related: [voss-concession-for-something, objection-diagnose-first]
+
+  - id: jones-what-time-works
+    book: Exactly What to Say (Jones)
+    technique: Lock in the follow-up
+    stage: follow_up
+    objection_type: think_about_it
+    lead_says:
+      - "I'll let you know"
+      - "I'll get back to you"
+      - "talk soon"
+    when_to_use: The conversation ends without a set follow-up.
+    do: Agree a specific time to reconnect, so the follow-up is expected, not chasing.
+    example_replies:
+      - "Sounds good. So it doesn't slip, shall I check in Thursday afternoon?"
+    avoid: Leaving it open-ended.
+    related: [objection-think-about-it, voss-no-oriented-question]
+
+  - id: jones-simple-question
+    book: Exactly What to Say (Jones)
+    technique: "What do you know about…?"
+    stage: value
+    objection_type: none
+    lead_says:
+      - "I don't know much about this"
+      - "I'm new to all this"
+      - "how does this even work"
+    when_to_use: The lead is new to the topic. Find out what they already know before explaining.
+    do: Ask what they already know, so you can fill gaps without overexplaining or talking down.
+    example_replies:
+      - "No problem, everyone starts somewhere. What do you know so far about how fixed and variable rates differ?"
+    avoid: A long lecture, or assuming they know nothing.
+    related: [challenger-reframe, carnegie-first-reply]
+
+  - id: jones-dont-worry
+    book: Exactly What to Say (Jones)
+    technique: "Don't worry…"
+    stage: objection
+    objection_type: trust
+    lead_says:
+      - "I'm worried about the paperwork"
+      - "my credit isn't great"
+      - "I've never done this before"
+    when_to_use: The lead is anxious about a specific obstacle.
+    do: Reassure about the specific worry in one line, then say what you'll do about it. Only reassure about things you can actually handle.
+    example_replies:
+      - "Don't worry about the paperwork, that's the bit we do for you. You'll just need to upload a few documents, and I'll tell you exactly which."
+    avoid: Reassuring about things that aren't in your control (approval, rates).
+    related: [voss-label, hormozi-value-equation]
+
+  # ---------------------------------------------------------------------------
+  # FOLLOW-UP / RE-ENGAGEMENT
+  # ---------------------------------------------------------------------------
+
+  - id: voss-given-up
+    book: Never Split the Difference (Voss)
+    technique: "Have you given up on…?"
+    stage: follow_up
+    objection_type: not_interested
+    lead_says:
+      - "(no reply after several follow-ups)"
+      - "(lead went quiet)"
+    when_to_use: The lead has gone silent after previous contact. Send once, not repeatedly.
+    do: Send a short no-oriented question that's easy to answer. It often gets a reply because it invites a "no".
+    example_replies:
+      - "Hi Alex, have you given up on moving this year?"
+    avoid: Guilt trips, repeated "just checking in" messages, or using it as the first follow-up.
+    related: [voss-no-oriented-question, objection-not-interested]
+
+  - id: followup-add-value
+    book: Influence (Cialdini) / The Challenger Sale
+    technique: Follow up with something useful
+    stage: follow_up
+    objection_type: none
+    lead_says:
+      - "(no reply to last message)"
+      - "(lead asked to follow up later)"
+    when_to_use: A planned follow-up after silence or a delay.
+    do: Each follow-up brings something new and useful (an update, a relevant insight, an answer to an earlier question), plus one easy question.
+    example_replies:
+      - "Hi Jo, rates dropped slightly this week, so the numbers we looked at are now about £40 a month better. Want me to re-run them?"
+    avoid: '"Just checking in" with nothing new.'
+    related: [cialdini-reciprocity, challenger-reframe]
